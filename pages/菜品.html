@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>八大菜系多维数据可视化</title>
+    <link href="../libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+        /*
+        ========================================
+        1. 基础样式
+        ========================================
+        */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: #f5f3ed;
+            color: #333;
+            height: 100vh; /* 固定视口高度 */
+            overflow: hidden; /* 禁止整页滚动 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px; /* 进一步缩小间距 */
+        }
+
+        /* 统一背景色变量 */
+        :root {
+            --bg-color: #f5f3ed;
+        }
+
+        /*
+        ========================================
+        2. 布局设计 - 2行x4列 (去卡片化)
+        ========================================
+        */
+        .container {
+            width: 100%;
+            max-width: 1500px;
+            flex: 1; /* 占据剩余空间 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; /* 防止内部内容撑开高度 */
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px 30px; /* 进一步缩小间距 */
+            justify-items: center;
+            width: 100%;
+        }
+
+        /*
+        ========================================
+        3. 单个菜品项 (无边框, 无背景)
+        ========================================
+        */
+        .dish-item {
+            width: 100%;
+            max-width: 280px; /* 进一步缩小宽度 */
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dish-item:hover {
+            transform: scale(1.05);
+        }
+
+        /*
+        ========================================
+        4. 核心圆环 (Canvas)
+        ========================================
+        */
+        .ring-container {
+            width: 260px; /* 整体缩小，确保屏幕放得下 */
+            height: 260px;
+            position: relative;
+            margin-bottom: 5px;
+        }
+
+        .ring-container canvas {
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); /* 添加灵动的弹跳过渡 */
+        }
+
+        .dish-item:hover .ring-container canvas {
+            transform: translate(-50%, -50%) rotate(12deg); /* 首页圆盘小幅旋转 */
+        }
+
+        /*
+        ========================================
+        5. 交互式图片 (普通/爆炸切换)
+        ========================================
+        */
+        .image-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 160px; /* 稍微调大容器 */
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none; /* 让鼠标事件穿透到父容器 */
+        }
+
+        .dish-img-normal {
+            width: 140px; /* 稍微调大菜品图 */
+            height: 140px;
+            object-fit: contain;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: absolute;
+            z-index: 2;
+        }
+
+        .dish-img-explode {
+            width: 165px; /* 稍微调大爆炸图 */
+            height: 165px;
+            object-fit: contain;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute;
+            z-index: 3;
+            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.4));
+        }
+
+        .dish-item:hover .dish-img-normal {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        .dish-item:hover .dish-img-explode {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /*
+        ========================================
+        6. 文本描述
+        ========================================
+        */
+        .dish-info {
+            text-align: center;
+            width: 100%;
+            padding: 0 10px;
+        }
+
+        .dish-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #2c3e50;
+        }
+
+        .dish-category {
+            font-size: 14px;
+            color: #8b4513;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+
+        .dish-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+            text-align: justify;
+            /* 保证对齐 */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /*
+        ========================================
+        7. 详情浮窗 (Expanded Modal)
+        ========================================
+        */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+        }
+
+        .modal {
+            background: #fff;
+            width: 90%;
+            max-width: 900px;
+            border-radius: 24px;
+            position: relative;
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-left {
+            width: 400px;
+            background: #fdfaf5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border-right: 1px solid #eee;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        /* 弹窗图片容器样式 - 彻底重置以确保 flex 居中生效 */
+        #modalImageWrapper {
+            width: 320px;
+            height: 320px;
+            position: relative;
+            top: 0;
+            left: 0;
+            transform: none;
+            margin: 0;
+            display: flex; /* 让内部图片也能通过 flex 居中，双重保险 */
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modalImageWrapper .dish-img-normal {
+            width: 300px;
+            height: 300px;
+            object-fit: contain;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #modalImageWrapper .dish-img-explode {
+            width: 340px;
+            height: 340px;
+            object-fit: contain;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.5);
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            z-index: 3;
+            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.4));
+        }
+
+        /* 弹窗内图片悬停效果 - 修复权重问题 */
+        .modal-left:hover #modalImageWrapper .dish-img-normal {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.8);
+        }
+
+        .modal-left:hover #modalImageWrapper .dish-img-explode {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        .modal-right {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .modal-title {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .modal-category {
+            font-size: 16px;
+            color: #8b4513;
+            margin-bottom: 20px;
+        }
+
+        .modal-intro {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 30px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #8b4513;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .stat-item {
+            margin-bottom: 10px;
+        }
+
+        .stat-label-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .stat-progress-bg {
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .stat-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            width: 0;
+            transition: width 1s ease-out;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: #eee;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #8b4513;
+            color: #fff;
+        }
+
+        /*
+        ========================================
+        8. 图例 (放置于底部，非悬浮遮挡)
+        ========================================
+        */
+        .legend {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 0;
+            margin-top: 10px;
+            border-radius: 8px;
+            flex-shrink: 0; /* 保证底部图例不被压缩 */
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px; /* 稍微调大字号 */
+            color: #333;
+            font-weight: 700;
+        }
+
+        .legend-dot {
+            width: 14px; /* 稍微调大色块 */
+            height: 14px;
+            border-radius: 50%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /*
+        ========================================
+        9. 响应式适配
+        ========================================
+        */
+        @media (max-width: 1200px) {
+            .cards-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .cards-grid { grid-template-columns: 1fr; }
+            .modal { flex-direction: column; }
+            .modal-left { width: 100%; padding: 20px; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    
+        /* 返回按钮 - 小箭头样式 */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: #c8302e;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+        <!-- 返回按钮 -->
+    <a href="../catalog.html" class="back-button" title="返回目录">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+<div class="container">
+        <div class="cards-grid" id="cardsGrid">
+            <!-- JS 动态生成 -->
+        </div>
+    </div>
+
+    <!-- 详情遮罩 -->
+    <div class="overlay" id="overlay">
+        <div class="modal" id="modal">
+            <div class="close-btn" id="closeBtn">&times;</div>
+            <div class="modal-left">
+                <!-- 仅保留图片包装器，去掉圆环容器和画布 -->
+                <div class="image-wrapper" id="modalImageWrapper">
+                    <img id="modalImgNormal" class="dish-img-normal" src="">
+                    <img id="modalImgExplode" class="dish-img-explode" src="">
+                </div>
+            </div>
+            <div class="modal-right">
+                <div class="modal-category" id="modalCategory"></div>
+                <h2 class="modal-title" id="modalTitle"></h2>
+                <div class="modal-intro" id="modalIntro"></div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图例 -->
+    <div class="legend" id="legend"></div>
+
+    <script>
+        // 1. 数据定义
+        const dimensions = [
+            { name: "制作时间", color: "#E8B86B" },
+            { name: "味型复杂度", color: "#7FAA9E" },
+            { name: "食材种类", color: "#D67A6E" },
+            { name: "价格定位", color: "#6C9EBF" },
+            { name: "烹饪技法", color: "#B592C2" },
+            { name: "营养价值", color: "#C08E6B" },
+            { name: "地域代表性", color: "#8CB28C" },
+            { name: "文化底蕴", color: "#E29B8C" }
+        ];
+
+        const dishesData = [
+            {
+                name: "糖醋鲤鱼",
+                category: "鲁菜",
+                scores: [6, 8, 6, 6, 8, 8, 10, 9],
+                shortDesc: "黄河鲤鱼为主料，外酥里嫩，酸甜适口，鱼尾高翘如龙门。",
+                longIntro: "糖醋鲤鱼是山东济南传统名菜，也是鲁菜的代表作。选用黄河名贵的鲤鱼为原料，经过炸制后，鱼尾高翘，形如龙门。其色泽金黄，外焦里嫩，酸甜可口，带有浓郁的黄河文化气息，常作为宴席上的压轴大菜。此菜不仅在口感上达到了酸甜的极致平衡，更在造型上寓意“步步高升”，极具文化底蕴。",
+                img1: "images/糖醋鲤鱼1.png",
+                img2: "images/糖醋鲤鱼2.png",
+                details: ["60分钟", "酸甜咸鲜", "黄河鲤鱼等6种", "80-120元", "中高难度", "富含不饱和脂肪酸", "鲁菜代表", "孔府宴必备菜"]
+            },
+            {
+                name: "麻婆豆腐",
+                category: "川菜",
+                scores: [4, 9, 7, 3, 5, 6, 10, 8],
+                shortDesc: "麻辣鲜香，豆腐嫩滑，肉末酥香，红油发亮，川味巅峰。",
+                longIntro: "麻婆豆腐起源于清同治年间，由成都陈麻婆创制。此菜讲究“麻、辣、烫、香、酥、嫩、鲜、活”八大特色。豆腐洁白完整，肉末酥香，红油发亮，是川菜中最为家喻户晓的经典之作。它完美体现了川菜对复杂调味的追求，尤其是对花椒与辣椒配合产生的“麻辣”灵魂的极致塑造。",
+                img1: "images/麻婆豆腐1.png",
+                img2: "images/麻婆豆腐2.png",
+                details: ["30分钟", "麻辣鲜香", "豆腐/牛肉等7种", "15-25元", "中等难度", "植物蛋白丰富", "川菜名片", "世界知名的中国菜"]
+            },
+            {
+                name: "白切鸡",
+                category: "粤菜",
+                scores: [3, 7, 4, 5, 4, 9, 10, 7],
+                shortDesc: "皮爽肉滑，骨香本味，清淡鲜美，不加调料却极尽鲜香。",
+                longIntro: "白切鸡又名白斩鸡，是粤菜中最能体现“食材本味”的吃法。讲究皮爽、肉滑、骨香。制作时不加任何调料，仅用开水浸熟，食用时配以特制的姜葱油。这种烹饪方式保留了鸡肉最自然的鲜甜和丰富的肉汁，充分展现了粤菜“清而不淡，鲜而不俗”的至高饮食境界。",
+                img1: "images/白切鸡1.png",
+                img2: "images/白切鸡2.png",
+                details: ["25分钟", "清鲜本味", "三黄鸡等4种", "35-60元", "火候控制极难", "优质蛋白来源", "粤菜招牌", "岭南传统民俗必备"]
+            },
+            {
+                name: "松鼠桂鱼",
+                category: "苏菜",
+                scores: [7, 8, 8, 8, 9, 8, 9, 10],
+                shortDesc: "形如松鼠，色泽红亮，外脆内嫩，甜酸适口，刀工精湛。",
+                longIntro: "松鼠桂鱼是江苏苏帮菜的传统杰作。将鳜鱼切花后炸制，头尾翘起，浇上糖醋汁后会发出类似松鼠的吱吱声。此菜色泽红亮，外脆内嫩，甜酸适口。制作工艺极其考验厨师的刀工——要在鱼身上切出数百个菱形花纹，炸制时还要精准控制油温以形成完美的造型，是苏式精致生活的文化缩影。",
+                img1: "images/松鼠桂鱼1.png",
+                img2: "images/松鼠桂鱼2.png",
+                details: ["90分钟", "酸甜鲜香", "鳜鱼/松子等8种", "120-180元", "极高难度刀工", "富含DHA", "苏菜典范", "乾隆下江南御赐名"]
+            },
+            {
+                name: "佛跳墙",
+                category: "闽菜",
+                scores: [10, 10, 10, 10, 10, 10, 9, 10],
+                shortDesc: "坛启荤香飘四邻，多重名贵食材煨制，天下第一汤。",
+                longIntro: "佛跳墙是闽菜之首，其制作工艺繁复。选用鲍鱼、海参、牦牛蹄筋、花菇等十余种名贵食材，加入高汤和绍兴酒，在瓦罐中密封慢火煨制十数小时。成菜汤汁浓郁而不腻，香气扑鼻，多种食材的鲜香相互渗透却又层次分明，口感软糯、脆滑交织，是名副其实的中国官府菜巅峰。",
+                img1: "images/佛跳墙1.png",
+                img2: "images/佛跳墙2.png",
+                details: ["8小时+", "醇厚浓郁", "18种名贵食材", "300-1000元", "大师级难度", "强身滋补圣品", "闽菜至尊", "国宴头菜"]
+            },
+            {
+                name: "东坡肉",
+                category: "浙菜",
+                scores: [8, 6, 5, 6, 7, 5, 9, 10],
+                shortDesc: "色泽红亮，酥烂而不碎，香糯不腻，江南文人菜雅致代表。",
+                longIntro: "东坡肉是浙菜（杭帮菜）的传统名菜，相传为北宋文学家苏东坡在杭州任知州时所创。选用肥瘦相间的五花肉，加入黄酒、白糖、酱油等，在密封的砂锅内慢火细炖。其色泽红亮如玛瑙，酥烂而形不碎，香糯不腻口，口感温润。这道菜不仅是美食，更是苏东坡“慢火、少水、火候足时它自美”生活哲学的体现。",
+                img1: "images/东坡肉1.png",
+                img2: "images/东坡肉2.png",
+                details: ["150分钟", "甜咸香浓", "精选五花肉", "60-120元", "重火功炖制", "热量较高", "浙菜名片", "文人饮食文化遗产"]
+            },
+            {
+                name: "剁椒鱼头",
+                category: "湘菜",
+                scores: [5, 9, 6, 6, 6, 8, 10, 7],
+                shortDesc: "鱼头鲜嫩，剁椒香辣，红亮夺目，湖湘大地热情之火。",
+                longIntro: "剁椒鱼头是湘菜中最具代表性的菜品。将雄鱼头配以湖南特产的鲜剁辣椒，通过“蒸”的方式使辣椒的鲜辣之气渗入鱼肉。菜品色泽红亮夺目，肉质极度鲜美，口感肥而不腻，辣中带酸。它展现了湘菜对“辣”与“鲜”的独特结合，红火的造型更寄托了“红红火火、鸿运当头”的美好愿望。",
+                img1: "images/剁椒鱼头1.png",
+                img2: "images/剁椒鱼头2.png",
+                details: ["45分钟", "鲜辣酸爽", "雄鱼头/剁椒", "70-130元", "中等难度", "胶原蛋白丰富", "湘菜灵魂", "湖湘饮食名片"]
+            },
+            {
+                name: "黄山炖鸽",
+                category: "徽菜",
+                scores: [9, 7, 7, 8, 8, 9, 9, 9],
+                shortDesc: "汤清味醇，鸽肉酥烂，黄山山珍滋补，徽式重火功之作。",
+                longIntro: "黄山炖鸽是徽菜中的滋补珍品。选用黄山本地乳鸽与当地山药、野山菌一同炖制。鸽肉软烂，汤汁如清水般透彻却鲜味浓郁醇厚。徽菜擅长炖、焖，讲究火功，这道菜完美展示了徽商饮食中对“真材实料、原汁原味、滋补调理”的重视。每一口汤都凝聚了黄山大山的精华，是徽派养生文化的杰作。",
+                img1: "images/黄山炖鸽1.png",
+                img2: "images/黄山乳鸽2.png", // 注意用户提供的文件名
+                details: ["180分钟", "清鲜醇香", "乳鸽/黄山山药", "150-250元", "慢火长炖", "高蛋白极低脂", "徽菜精华", "古徽商宴客珍品"]
+            }
+        ];
+
+        // 2. 初始化图例
+        const legendContainer = document.getElementById('legend');
+        dimensions.forEach(dim => {
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = `<div class="legend-dot" style="background:${dim.color}"></div><span>${dim.name}</span>`;
+            legendContainer.appendChild(item);
+        });
+
+        // 3. 绘图逻辑
+        function drawRings(canvas, scores, isModal = false) {
+            const ctx = canvas.getContext('2d');
+            const cw = canvas.width;
+            const ch = canvas.height;
+            const cx = cw / 2;
+            const cy = ch / 2;
+
+            const numDimensions = 8;
+            const numLevels = 10;
+
+            // 修复：针对 500x500 的弹窗 Canvas 和 450x450 的首页 Canvas 分别设置半径
+            // 确保 outerRadius 绝不超过 Canvas 半径，防止切边
+            const innerRadius = isModal ? 130 : 85;
+            const outerRadius = isModal ? 240 : 135;
+
+            // 维度间的物理间距
+            const dimensionGap = isModal ? 4 : 2;
+
+            // 计算每个大维度环的总宽度
+            const totalAvailableWidth = outerRadius - innerRadius - (numDimensions - 1) * dimensionGap;
+            const dimensionWidth = totalAvailableWidth / numDimensions;
+            const levelWidth = dimensionWidth / numLevels;
+            const levelGap = 0.3; // 极细线条间隙
+
+            ctx.clearRect(0, 0, cw, ch);
+
+            const quadrantStarts = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+
+            dimensions.forEach((dim, idx) => {
+                const score = scores[idx];
+                const qIdx = Math.floor(idx / 2);
+                const startAngle = quadrantStarts[qIdx];
+                const arcLength = (score / 10) * (Math.PI * 2);
+                const endAngle = startAngle + arcLength;
+
+                // 计算当前维度的起始半径位置（包含前面的间距）
+                const currentDimBaseRadius = innerRadius + (idx * (dimensionWidth + dimensionGap));
+
+                for (let level = 0; level < numLevels; level++) {
+                    const r = currentDimBaseRadius + (level * levelWidth);
+
+                    // 背景圆环 (极淡)
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    ctx.lineWidth = levelWidth - levelGap;
+                    ctx.strokeStyle = 'rgba(200, 200, 200, 0.06)';
+                    ctx.stroke();
+
+                    // 数据圆弧
+                    if (score > 0) {
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, r, startAngle, endAngle);
+                        ctx.lineWidth = levelWidth - levelGap;
+                        ctx.strokeStyle = dim.color;
+                        ctx.stroke();
+                    }
+                }
+            });
+
+            // 中心遮罩
+            ctx.beginPath();
+            ctx.arc(cx, cy, innerRadius - 2, 0, Math.PI * 2);
+            ctx.fillStyle = isModal ? '#fdfaf5' : '#f5f3ed';
+            ctx.fill();
+        }
+
+        // 4. 生成页面内容
+        const grid = document.getElementById('cardsGrid');
+        dishesData.forEach((dish, index) => {
+            const item = document.createElement('div');
+            item.className = 'dish-item';
+            item.style.backgroundColor = 'transparent'; // 确保完全透明
+
+            item.innerHTML = `
+                <div class="ring-container">
+                    <canvas id="canvas-${index}" width="450" height="450"></canvas>
+                    <div class="image-wrapper">
+                        <img src="${dish.img1}" class="dish-img-normal">
+                        <img src="${dish.img2}" class="dish-img-explode">
+                    </div>
+                </div>
+                <div class="dish-info">
+                    <div class="dish-name">${dish.name}</div>
+                    <div class="dish-category">${dish.category}</div>
+                    <div class="dish-desc">${dish.shortDesc}</div>
+                </div>
+            `;
+
+            grid.appendChild(item);
+
+            // 立即绘制
+            const canvas = document.getElementById(`canvas-${index}`);
+            drawRings(canvas, dish.scores);
+
+            // 点击事件
+            item.onclick = () => openModal(dish);
+        });
+
+        // 5. 模态框逻辑
+        const overlay = document.getElementById('overlay');
+
+        function openModal(dish) {
+            document.getElementById('modalTitle').innerText = dish.name;
+            document.getElementById('modalCategory').innerText = dish.category;
+            document.getElementById('modalIntro').innerText = dish.longIntro;
+
+            // 设置图片
+            document.getElementById('modalImgNormal').src = dish.img1;
+            document.getElementById('modalImgExplode').src = dish.img2;
+
+            // 详情统计
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = '';
+            dimensions.forEach((dim, i) => {
+                const stat = document.createElement('div');
+                stat.className = 'stat-item';
+                stat.innerHTML = `
+                    <div class="stat-label-row">
+                        <span>${dim.name}：${dish.details[i]}</span>
+                        <span>${dish.scores[i]}分</span>
+                    </div>
+                    <div class="stat-progress-bg">
+                        <div class="stat-progress-fill" style="background:${dim.color}; width:0%"></div>
+                    </div>
+                `;
+                statsGrid.appendChild(stat);
+
+                // 动画效果
+                setTimeout(() => {
+                    stat.querySelector('.stat-progress-fill').style.width = (dish.scores[i] * 10) + '%';
+                }, 100);
+            });
+
+            overlay.classList.add('active');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('active');
+        }
+
+        document.getElementById('closeBtn').onclick = closeModal;
+        overlay.onclick = (e) => { if(e.target === overlay) closeModal(); };
+        window.onkeydown = (e) => { if(e.key === 'Escape') closeModal(); };
+
+    </script>
+</body>
+</html>

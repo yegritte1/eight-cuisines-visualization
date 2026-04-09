@@ -1,0 +1,1444 @@
+  <!DOCTYPE html>
+  <html lang="zh-CN">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>八大菜系——中国饮食文化的结构与差异</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+  /* ── Zapier Design System ── */
+  :root {
+    --bg:        #fdfaf2; /* 宣纸色 */
+    --bg-off:    #f7f2e1;
+    --text:      #2b2b2b; /* 墨色 */
+    --text-body: #3c3c3c;
+    --text-muted:#8b7d6b;
+    --accent:    #9d2933; /* 纁红色/朱砂 */
+    --border:    #d1c7b7;
+    --surface:   #f2ebd9;
+    --sand-mid:  #c9a063; /* 绢金色 */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "STSong", "SimSun", "NSimSun", "Songti SC", serif;
+    background: var(--bg);
+    background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png'); /* 纸张纹理 */
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* 通用屏幕 */
+  .screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 40px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .screen.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  /* 卡片错落入场 */
+  .screen.visible .geo-card,
+  .screen.visible .ingredient-card,
+  .screen.visible .dish-card,
+  .screen.visible .radar-item {
+    animation: cardIn 0.5s ease both;
+  }
+  .screen.visible .geo-card:nth-child(1), .screen.visible .ingredient-card:nth-child(1),
+  .screen.visible .dish-card:nth-child(1), .screen.visible .radar-item:nth-child(1) { animation-delay: 0.05s; }
+  .screen.visible .geo-card:nth-child(2), .screen.visible .ingredient-card:nth-child(2),
+  .screen.visible .dish-card:nth-child(2), .screen.visible .radar-item:nth-child(2) { animation-delay: 0.12s; }
+  .screen.visible .geo-card:nth-child(3), .screen.visible .ingredient-card:nth-child(3),
+  .screen.visible .dish-card:nth-child(3), .screen.visible .radar-item:nth-child(3) { animation-delay: 0.19s; }
+  .screen.visible .geo-card:nth-child(4), .screen.visible .ingredient-card:nth-child(4),
+  .screen.visible .dish-card:nth-child(4), .screen.visible .radar-item:nth-child(4) { animation-delay: 0.26s; }
+  .screen.visible .geo-card:nth-child(5), .screen.visible .ingredient-card:nth-child(5),
+  .screen.visible .dish-card:nth-child(5), .screen.visible .radar-item:nth-child(5) { animation-delay: 0.33s; }
+  .screen.visible .geo-card:nth-child(6), .screen.visible .ingredient-card:nth-child(6),
+  .screen.visible .dish-card:nth-child(6), .screen.visible .radar-item:nth-child(6) { animation-delay: 0.40s; }
+  .screen.visible .geo-card:nth-child(7), .screen.visible .ingredient-card:nth-child(7),
+  .screen.visible .dish-card:nth-child(7), .screen.visible .radar-item:nth-child(7) { animation-delay: 0.47s; }
+  .screen.visible .geo-card:nth-child(8), .screen.visible .ingredient-card:nth-child(8),
+  .screen.visible .dish-card:nth-child(8), .screen.visible .radar-item:nth-child(8) { animation-delay: 0.54s; }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── 数据来源标签 ── */
+  .data-tag {
+    display: none; /* 用户要求：右下角估算or已验证不要写进去 */
+  }
+
+  /* ── 屏幕1：引子 ── */
+  #screen1 { background: var(--bg); text-align: center; border-bottom: 1px solid var(--border); }
+  #screen1 h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 500;
+    line-height: 0.95;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  #screen1 .subtitle {
+    margin-top: 24px;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    animation: bounce 2s infinite;
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(8px); }
+  }
+
+  /* ── 通用标题 ── */
+  .screen-title {
+    font-family: "STSong", "SimSun", "Songti SC", serif;
+    font-size: clamp(26px, 4vw, 42px);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 12px;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: 2px;
+  }
+  .screen-subtitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  /* ── 屏幕背景交替 ── */
+  #screen2, #screen4, #screen6, #screen-market { background: var(--bg); }
+  #screen5, #screen7, #screen-sunburst, #screen8 { background: var(--bg-off); }
+  #screen-heatmap { background: var(--bg); }
+
+  /* ── 地理卡片 ── */
+  .geo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    max-width: 900px;
+    width: 100%;
+  }
+  .geo-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 20px 16px;
+    text-align: center;
+    transition: border-color 0.2s;
+    cursor: default;
+  }
+  .geo-card:hover { border-color: var(--text-body); }
+  .geo-card .cuisine-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+  .geo-card .city { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+  .geo-card .terrain {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    color: var(--text-body);
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+  .geo-card .climate-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .geo-card .climate-val { color: var(--accent); font-weight: 600; }
+
+  /* ── 图表容器 ── */
+  .chart-container { width: 100%; max-width: 800px; height: 420px; }
+
+  /* ── Insight box ── */
+  .insight-box {
+    max-width: 800px;
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin-top: 24px;
+    border-radius: 0 5px 5px 0;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-body);
+  }
+  .insight-box strong { color: var(--text); font-weight: 600; }
+
+  /* ── 食材卡片 ── */
+  .ingredient-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    max-width: 900px;
+    width: 100%;
+  }
+  .ingredient-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+  .ingredient-card:hover { border-color: var(--text-body); }
+  .ingredient-card .name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .ingredient-card .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ingredient-card .tag {
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    color: var(--text-body);
+  }
+  .ingredient-card .tag.highlight {
+    background: var(--bg);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-weight: 600;
+  }
+
+  /* ── 雷达图 ── */
+  .radar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    max-width: 960px;
+    width: 100%;
+  }
+  .radar-item {
+    text-align: center;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px 8px 8px;
+  }
+  .radar-item .r-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .radar-chart { width: 100%; height: 180px; }
+
+  /* ── 代表菜卡片 ── */
+  .dish-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    max-width: 960px;
+    width: 100%;
+  }
+  .dish-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 18px 14px;
+    transition: border-color 0.2s;
+  }
+  .dish-card:hover { border-color: var(--text-body); }
+  .dish-card .d-cuisine {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .dish-card .d-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .dish-card .d-stats { display: flex; flex-direction: column; gap: 6px; }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .stat-row .val { color: var(--accent); font-weight: 600; }
+  .dish-mini-radar { width: 100%; height: 120px; margin-top: 8px; }
+
+  /* ── 时间线 ── */
+  .timeline-wrap {
+    max-width: 860px;
+    width: 100%;
+    position: relative;
+    padding: 20px 0;
+  }
+  .timeline-axis {
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--border);
+  }
+  .timeline-events {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+  .t-event {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 120px;
+    cursor: pointer;
+  }
+  .t-event.highlight .t-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(255,79,0,0.15);
+  }
+  .t-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    margin: 8px 0;
+    transition: all 0.2s;
+  }
+  .t-year { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+  .t-label { font-size: 11px; color: var(--text-body); text-align: center; margin-top: 6px; line-height: 1.4; }
+  .t-event:hover .t-dot { border-color: var(--text-body); }
+
+  /* ── 市场热度 ── */
+  .market-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    max-width: 800px;
+    width: 100%;
+    margin-top: 24px;
+  }
+  .market-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.2s;
+  }
+  .market-card:hover { border-color: var(--text-body); }
+  .mc-name { font-size: 13px; font-weight: 600; min-width: 32px; color: var(--text); }
+  .mc-bar-wrap { flex: 1; height: 4px; background: var(--surface); border-radius: 2px; overflow: hidden; }
+  .mc-bar { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .mc-share { font-size: 12px; font-weight: 500; color: var(--text-muted); min-width: 36px; text-align: right; }
+
+  /* ── Sunburst ── */
+  .sunburst-panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 4px;
+  }
+  .sunburst-dish-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 13px;
+    color: var(--text-body);
+  }
+  .sunburst-dish-item:hover { background: var(--surface); }
+  .sunburst-dish-item.active { background: var(--surface); font-weight: 600; color: var(--text); }
+  .dish-level-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    min-width: 18px;
+    text-align: center;
+  }
+  .dish-score-bar {
+    flex: 1;
+    height: 3px;
+    background: var(--surface);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .dish-score-fill { height: 100%; border-radius: 2px; }
+
+  .sunburst-detail {
+    min-height: 60px;
+    max-width: 600px;
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 5px 5px 0;
+    font-size: 14px;
+    color: var(--text-body);
+    line-height: 1.8;
+    transition: opacity 0.3s;
+    opacity: 0;
+  }
+  .sunburst-detail.visible { opacity: 1; }
+
+  /* ── 结尾 ── */
+  #screen8 { text-align: center; border-top: 1px solid var(--border); }
+  #screen8 .end-title {
+    font-size: clamp(24px, 4vw, 48px);
+    font-weight: 500;
+    line-height: 1.0;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  #screen8 .end-sub { font-size: 16px; color: var(--text-muted); margin-bottom: 48px; }
+  .final-stats { display: flex; gap: 48px; justify-content: center; margin-bottom: 48px; }
+  .f-stat .num {
+    font-size: 48px;
+    font-weight: 600;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+  .f-stat .label { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-top: 4px; }
+  #final-radar { width: min(400px, 90vw); height: min(400px, 90vw); }
+  .end-quote {
+    font-size: 16px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 32px;
+    max-width: 500px;
+    line-height: 1.6;
+  }
+
+  /* ── 分隔线 ── */
+  .divider {
+    width: 32px; height: 2px;
+    background: var(--accent);
+    margin: 12px auto 28px;
+  }
+
+  /* ── 热力图屏幕 ── */
+  #screen-heatmap { background: var(--bg); }
+  #screen-bridge  { background: var(--bg-off); }
+
+  /* ── 进入目录按钮 ── */
+  .explore-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 40px;
+    padding: 14px 36px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-decoration: none;
+    border-radius: 6px;
+    border: 2px solid var(--accent);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(209, 80, 57, 0.2);
+  }
+
+  .explore-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(209, 80, 57, 0.3);
+    background: #c44e3d;
+    border-color: #c44e3d;
+  }
+
+  .explore-button svg {
+    transition: transform 0.3s ease;
+  }
+
+  .explore-button:hover svg {
+    transform: translateX(4px);
+  }
+
+  </style>
+  </head>
+  <body>
+
+  <!-- 屏幕1：引子 -->
+  <section class="screen" id="screen1">
+    <h1>你吃的每一口<br>都是地理的结果</h1>
+    <div class="subtitle">八大菜系 · 中国饮食文化的结构与差异</div>
+    <div class="scroll-hint">↓ 向下滚动探索</div>
+  </section>
+
+  <!-- 屏幕2：地理分层 -->
+  <section class="screen" id="screen2">
+    <div class="screen-title">地形把中国饮食切成了八块</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">不同的地理环境，孕育了截然不同的饮食文化</div>
+    <div class="geo-grid" id="geoGrid"></div>
+  </section>
+
+  <!-- 屏幕4：食材 -->
+  <section class="screen" id="screen4">
+    <div class="screen-title">地理给了什么食材，厨师就做什么菜</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">各菜系核心食材与地理来源</div>
+    <div class="ingredient-grid" id="ingredientGrid"></div>
+  </section>
+
+  <!-- 屏幕5：口味雷达 -->
+  <section class="screen" id="screen5">
+    <div class="screen-title">六维口味，八种答案</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">北方菜系平均咸度 7.3 · 南方菜系平均咸度 4.2</div>
+    <div class="radar-grid" id="radarGrid"></div>
+  </section>
+
+  <!-- 屏幕6：代表菜 -->
+  <section class="screen" id="screen6">
+    <div class="screen-title">一道菜，浓缩一个菜系的地理基因</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">热量与烹饪时长来自《中国食物成分表》及菜谱抽样</div>
+    <div class="dish-grid" id="dishGrid"></div>
+  </section>
+
+  <!-- 屏幕7：历史 -->
+  <section class="screen" id="screen7">
+    <div class="screen-title">现在的口味，是几百年演变的结果</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">两个关键历史事件，改变了中国饮食格局</div>
+    <div class="timeline-wrap">
+      <div class="timeline-axis"></div>
+      <div class="timeline-events" id="timelineEvents"></div>
+    </div>
+    <div class="insight-box" style="margin-top:40px">
+      <strong>关键转折：</strong>明末（约1600年）辣椒传入中国，川菜湘菜口味发生根本性转变——在此之前，川菜以咸鲜为主，辣椒传入后逐渐形成今日
+  麻辣风格。<br>
+      宋元海上贸易兴起，粤菜闽菜大量吸收东南亚食材，形成独特的海洋饮食文化。
+    </div>
+  </section>
+
+  <!-- 屏幕7.5：市场热度趋势 -->
+  <section class="screen" id="screen-market">
+    <div class="screen-title">哪个菜系最受欢迎</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">2015—2025 年网络热度指数变化</div>
+    <div class="chart-container" id="trendChart"></div>
+    <div class="market-cards" id="marketCards"></div>
+    <div class="insight-box">
+      <strong>趋势洞察：</strong>川菜以 <strong>21%</strong> 的门店占比稳居第一，湘菜增速最快（+51%），从区域菜系跃升为全国第二大增长极。粤菜热度稳定但增速趋缓，徽菜市场份额持续垫底——这与徽商的历史衰落高度吻合。
+    </div>
+  </section>
+
+  <!-- 屏幕8：影响力画像 Sunburst -->
+  <section class="screen" id="screen-sunburst">
+    <div class="screen-title">119道名菜的文化权重</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">点击扇形下钻 · 点击中心返回 · 圆弧大小 = 维基百科关注度</div>
+    <div style="display:flex;gap:24px;align-items:flex-start;width:100%;max-width:1100px;justify-content:center;flex-wrap:wrap;">
+      <div id="sunburstChart" style="width:min(620px,90vw);height:min(620px,90vw);flex-shrink:0;"></div>
+      <div id="sunburst-panel" style="width:260px;min-width:220px;display:flex;flex-direction:column;gap:12px;padding-top:40px;"></div>
+    </div>
+    <div id="sunburst-detail" class="sunburst-detail" style="max-width:900px;"></div>
+  </section>
+
+  <!-- 屏幕8.5：过渡散点图 -->
+  <section class="screen" id="screen-bridge">
+    <div class="screen-title">文化权重与商业扩散，是两件事</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">每个点代表一个菜系 · X轴=名菜文化影响力均值 · Y轴=全国20城餐厅渗透度</div>
+    <div class="chart-container" id="bridgeChart" style="height:460px;max-width:760px;"></div>
+    <div class="insight-box">
+      <strong>反直觉的发现：</strong>粤菜的名菜文化权重在八大菜系中最低——维基百科上关于粤菜菜品的讨论远少于川菜——但粤菜馆的全国覆盖率与川菜并列第一。这说明<strong>商业扩散靠的是移民网络和资本</strong>，而<strong>文化影响力靠的是故事和历史</strong>。苏菜恰好相反：名菜众多、文化权重高，但走出江苏的能力极弱。
+    </div>
+  </section>
+
+  <!-- 屏幕8.5：菜系地理扩散热力图 -->
+  <section class="screen" id="screen-heatmap">
+    <div class="screen-title">哪个菜系走出了家乡</div>
+    <div class="divider"></div>
+    <div class="screen-subtitle">20城高德餐厅 POI 数量 · 颜色越深代表该菜系在当地渗透越强</div>
+    <div class="chart-container" id="heatmapChart" style="height:520px;max-width:960px;"></div>
+    <div class="insight-box">
+      <strong>影响力溢出：</strong>川菜和粤菜已实现全国饱和覆盖，在每座城市都触及数据上限。湘菜紧随其后，在非湖南城市仍保持强势。鲁菜在山东以外急剧衰减——这是八大菜系中地域性最强的一个。闽菜和徽菜的扩散半径最小，基本局限于本省周边。
+    </div>
+    <span class="data-tag tag-verified">数据来源：高德地图 POI · 2024年实测 · 20城抽样</span>
+  </section>
+
+  <!-- 屏幕8：结尾 -->
+  <section class="screen" id="screen8">
+    <div class="end-title">八种口味，一个中国</div>
+    <div class="end-sub">没有哪种口味是标准答案，地理给了每个地方不同的答案</div>
+    <div class="final-stats">
+      <div class="f-stat"><span class="num">8</span><span class="label">大菜系</span></div>
+      <div class="f-stat"><span class="num">40</span><span class="label">道代表菜</span></div>
+      <div class="f-stat"><span class="num">31</span><span class="label">个覆盖省份</span></div>
+    </div>
+    <div id="final-radar"></div>
+    <div class="end-quote">"一方水土养一方人，一方人做一方菜"</div>
+
+    <!-- 进入目录按钮 -->
+    <a href="catalog.html" class="explore-button">
+      <span>开始探索</span>
+      <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; margin-left: 8px;">
+        <polyline points="9 18 15 12 9 6" stroke="currentColor" stroke-width="2.5" fill="none"></polyline>
+      </svg>
+    </a>
+  </section>
+
+  <script>
+  // ============================================================
+  // 数据层
+  // ============================================================
+  const cuisines = [
+    { name:"川菜", city:"成都", province:"四川", terrain:"盆地", temp:16.7, rain:1000,
+      flavor:[7,6,3,5,10,9], ingredients:["辣椒","花椒","豆瓣酱","猪肉","豆腐"],
+      dish:"麻婆豆腐", kcal:180, time:20, color:"#e74c3c" },
+    { name:"粤菜", city:"广州", province:"广东", terrain:"平原+沿海", temp:22.0, rain:1720,
+      flavor:[10,5,4,3,2,7], ingredients:["海鲜","鸡肉","叉烧","蔬菜","豆腐"],
+      dish:"白切鸡", kcal:200, time:60, color:"#e67e22" },
+    { name:"苏菜", city:"南京", province:"江苏", terrain:"平原+水网", temp:15.4, rain:1000,
+      flavor:[9,6,8,4,2,7], ingredients:["鱼虾","猪肉","鸭肉","蔬菜","豆腐"],
+      dish:"松鼠鳜鱼", kcal:280, time:60, color:"#f1c40f" },
+    { name:"闽菜", city:"福州", province:"福建", terrain:"丘陵+沿海", temp:19.7, rain:1400,
+      flavor:[9,7,5,6,3,8], ingredients:["海鲜","猪肉","菌类","蔬菜","豆腐"],
+      dish:"佛跳墙", kcal:380, time:180, color:"#2ecc71" },
+    { name:"浙菜", city:"杭州", province:"浙江", terrain:"平原+丘陵", temp:16.2, rain:1400,
+      flavor:[8,5,7,4,2,7], ingredients:["鱼虾","猪肉","笋","蔬菜","豆腐"],
+      dish:"东坡肉", kcal:520, time:120, color:"#3498db" },
+    { name:"湘菜", city:"长沙", province:"湖南", terrain:"丘陵+湖泊", temp:17.0, rain:1400,
+      flavor:[6,7,2,6,9,8], ingredients:["辣椒","猪肉","腊肉","鱼","蔬菜"],
+      dish:"剁椒鱼头", kcal:280, time:30, color:"#9b59b6" },
+    { name:"徽菜", city:"合肥", province:"安徽", terrain:"山地+丘陵", temp:15.7, rain:1000,
+      flavor:[7,7,5,4,4,8], ingredients:["山珍","野味","猪肉","豆腐","蔬菜"],
+      dish:"臭鳜鱼", kcal:320, time:180, color:"#1abc9c" },
+    { name:"鲁菜", city:"济南", province:"山东", terrain:"平原+丘陵", temp:14.7, rain:680,
+      flavor:[8,8,3,3,2,7], ingredients:["猪肉","海鲜","葱姜蒜","蔬菜","鸡肉"],
+      dish:"九转大肠", kcal:380, time:60, color:"#e91e63" },
+  ];
+
+  const timelineData = [
+    { year:"先秦", label:"鲁菜苏菜<br>饮食文化奠基", highlight:false },
+    { year:"秦汉", label:"川菜粤菜<br>初步形成", highlight:false },
+    { year:"唐宋", label:"苏菜进入<br>宫廷御膳", highlight:false },
+    { year:"南宋", label:"浙菜闽菜<br>随迁都成熟", highlight:false },
+    { year:"明末<br>1600", label:"辣椒传入<br>川湘口味突变", highlight:true },
+    { year:"清代", label:"八大菜系<br>全面成熟", highlight:false },
+    { year:"近现代", label:"菜系随移民<br>传播全国", highlight:false },
+  ];
+
+  // ============================================================
+  // 渲染函数
+  // ============================================================
+
+  // 屏幕2：地理卡片
+  function renderGeo() {
+    const grid = document.getElementById("geoGrid");
+    cuisines.forEach(c => {
+      grid.innerHTML += `
+        <div class="geo-card">
+          <div class="cuisine-name"><i class="fa-solid fa-map-location-dot"></i> ${c.name}</div>
+          <div class="city">${c.city} · ${c.province}</div>
+          <div class="terrain"><i class="fa-solid fa-mountain-sun"></i> ${c.terrain}</div>
+          <div class="climate-row">
+            <span><i class="fa-solid fa-temperature-half"></i> 年均气温</span>
+            <span class="climate-val">${c.temp}℃</span>
+          </div>
+          <div class="climate-row">
+            <span><i class="fa-solid fa-droplet"></i> 年均降水</span>
+            <span class="climate-val">${c.rain}mm</span>
+          </div>
+        </div>`;
+    });
+  }
+
+  // 屏幕4：食材卡片
+  function renderIngredients() {
+    const grid = document.getElementById("ingredientGrid");
+    cuisines.forEach(c => {
+      const tags = c.ingredients.map((ing, i) =>
+        `<span class="tag ${i===0?'highlight':''}">${ing}</span>`
+      ).join("");
+      grid.innerHTML += `
+        <div class="ingredient-card">
+          <div class="name"><i class="fa-solid fa-leaf"></i> ${c.name}</div>
+          <div class="tags">${tags}</div>
+        </div>`;
+    });
+  }
+
+  // 屏幕5：雷达图
+  function renderRadars() {
+    const grid = document.getElementById("radarGrid");
+    const dims = ["鲜","咸","甜","酸","辣","香"];
+    cuisines.forEach(c => {
+      const id = `radar_${c.name}`;
+      grid.innerHTML += `
+        <div class="radar-item">
+          <div class="r-name">${c.name}</div>
+          <div class="radar-chart" id="${id}"></div>
+        </div>`;
+      setTimeout(() => {
+        const chart = echarts.init(document.getElementById(id));
+        chart.setOption({
+          backgroundColor:"transparent",
+          radar:{
+            indicator: dims.map(d=>({name:d,max:10})),
+            axisName:{color:"#939084",fontSize:12,fontFamily:"STSong, serif"},
+            splitLine:{lineStyle:{color:"#eceae3",width:1}},
+            splitArea:{areaStyle:{color:["#fdfaf2","#f7f2e1"]}},
+            axisLine:{lineStyle:{color:"#c5c0b1"}},
+            shape:"circle"
+          },
+          series:[{
+            type:"radar",
+            data:[{value:c.flavor, name:c.name,
+              areaStyle:{color:c.color+"55",shadowBlur:8,shadowColor:c.color+"30"},
+              lineStyle:{color:c.color,width:2.5},
+              itemStyle:{color:c.color,borderColor:"#fff",borderWidth:2}
+            }],
+            emphasis:{
+              areaStyle:{color:c.color+"88"},
+              lineStyle:{width:3}
+            }
+          }]
+        });
+      }, 100);
+    });
+  }
+
+  // 屏幕6：代表菜
+  function renderDishes() {
+    const grid = document.getElementById("dishGrid");
+    const dims = ["鲜","咸","甜","酸","辣","香"];
+    cuisines.forEach(c => {
+      const id = `dish_radar_${c.name}`;
+      grid.innerHTML += `
+        <div class="dish-card">
+          <div class="d-cuisine">${c.name}</div>
+          <div class="d-name"><i class="fa-solid fa-bowl-food"></i> ${c.dish}</div>
+          <div class="d-stats">
+            <div class="stat-row"><span><i class="fa-solid fa-fire-flame-curved"></i> 热量</span><span class="val">${c.kcal} kcal</span></div>
+            <div class="stat-row"><span><i class="fa-solid fa-hourglass-half"></i> 烹饪时长</span><span class="val">${c.time} 分钟</span></div>
+          </div>
+          <div class="dish-mini-radar" id="${id}"></div>
+        </div>`;
+      setTimeout(() => {
+        const chart = echarts.init(document.getElementById(id));
+        chart.setOption({
+          backgroundColor:"transparent",
+          radar:{
+            indicator:dims.map(d=>({name:d,max:10})),
+            axisName:{color:"#939084",fontSize:9,fontFamily:"STSong, serif"},
+            splitLine:{lineStyle:{color:"#eceae3",width:1}},
+            splitArea:{show:true,areaStyle:{color:["#fdfaf2","#f7f2e1"]}},
+            axisLine:{lineStyle:{color:"#c5c0b1"}},
+            shape:"circle"
+          },
+          series:[{
+            type:"radar",
+            data:[{value:c.flavor,
+              areaStyle:{color:c.color+"30"},
+              lineStyle:{color:c.color,width:1.5},
+              itemStyle:{color:c.color}
+            }]
+          }]
+        });
+      }, 100);
+    });
+  }
+
+  // 屏幕7：时间线
+  function renderTimeline() {
+    const wrap = document.getElementById("timelineEvents");
+    timelineData.forEach(t => {
+      wrap.innerHTML += `
+        <div class="t-event ${t.highlight?'highlight':''}">
+          <div class="t-year">${t.year}</div>
+          <div class="t-dot"></div>
+          <div class="t-label">${t.label}</div>
+        </div>`;
+    });
+  }
+
+  // 屏幕8：最终雷达叠加
+  function renderFinalRadar() {
+    const chart = echarts.init(document.getElementById("final-radar"));
+    const dims = ["鲜","咸","甜","酸","辣","香"];
+    chart.setOption({
+      backgroundColor:"transparent",
+      radar:{
+        indicator:dims.map(d=>({name:d,max:10})),
+        axisName:{color:"#2b2b2b",fontSize:13,fontWeight:600,fontFamily:"STSong, serif"},
+        splitLine:{lineStyle:{color:"#eceae3",width:1}},
+        splitArea:{areaStyle:{color:["#fdfaf2","#f7f2e1"]}},
+        axisLine:{lineStyle:{color:"#c5c0b1"}},
+        shape:"circle"
+      },
+      series:[{
+        type:"radar",
+        data: cuisines.map(c=>({
+          value:c.flavor, name:c.name,
+          areaStyle:{color:c.color+"30"},
+          lineStyle:{color:c.color,width:2.5,opacity:0.95},
+          itemStyle:{color:c.color,borderColor:"#fff",borderWidth:2}
+        })),
+        emphasis:{
+          areaStyle:{opacity:0.6},
+          lineStyle:{width:3.5}
+        }
+      }],
+      legend:{
+        data:cuisines.map(c=>c.name),
+        textStyle:{color:"#36342e",fontSize:12,fontFamily:"STSong, serif"},
+        bottom:0,
+        itemGap:16
+      }
+    });
+  }
+
+  // ============================================================
+  // 过渡散点图：文化权重 vs 商业扩散
+  // ============================================================
+  function renderBridge() {
+    const chart = echarts.init(document.getElementById("bridgeChart"));
+
+    const bridgeData = [
+      { name:"川菜", impact:72.6, poi:125.0, color:"#e74c3c" },
+      { name:"粤菜", impact:36.4, poi:125.0, color:"#e67e22" },
+      { name:"湘菜", impact:55.0, poi:87.7,  color:"#9b59b6" },
+      { name:"浙菜", impact:60.1, poi:118.8, color:"#3498db" },
+      { name:"闽菜", impact:49.7, poi:50.4,  color:"#2ecc71" },
+      { name:"鲁菜", impact:56.7, poi:30.8,  color:"#e91e63" },
+      { name:"苏菜", impact:52.6, poi:12.2,  color:"#f1c40f" },
+      { name:"徽菜", impact:47.4, poi:22.6,  color:"#1abc9c" },
+    ];
+
+    chart.setOption({
+      backgroundColor: "transparent",
+      tooltip: {
+        formatter: p => {
+          const d = p.data;
+          return `<strong>${d.name}</strong><br>文化权重均值：${d.value[0]}<br>全国渗透均值：${d.value[1]} POI`;
+        }
+      },
+      grid: { left: 60, right: 40, top: 40, bottom: 60 },
+      xAxis: {
+        name: "名菜文化权重均值",
+        nameLocation: "middle",
+        nameGap: 40,
+        nameTextStyle: { color: "#939084", fontSize: 12 },
+        min: 25, max: 85,
+        axisLine: { lineStyle: { color: "#c5c0b1" } },
+        axisLabel: { color: "#939084" },
+        splitLine: { lineStyle: { color: "#eceae3" } },
+      },
+      yAxis: {
+        name: "全国20城餐厅渗透均值",
+        nameLocation: "middle",
+        nameGap: 48,
+        nameTextStyle: { color: "#939084", fontSize: 12 },
+        min: 0, max: 140,
+        axisLine: { lineStyle: { color: "#c5c0b1" } },
+        axisLabel: { color: "#939084" },
+        splitLine: { lineStyle: { color: "#eceae3" } },
+      },
+      // 四象限参考线
+      markLine: { silent: true },
+      series: [
+        // 四象限背景注释
+        {
+          type: "scatter",
+          data: bridgeData.map(d => ({
+            name: d.name,
+            value: [d.impact, d.poi],
+            itemStyle: { color: d.color, opacity: 0.9 },
+            symbolSize: p => 20 + p.data.value[1] / 8,
+          })),
+          label: {
+            show: true,
+            formatter: p => p.name,
+            position: "top",
+            color: "#36342e",
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: "STSong, serif",
+          },
+          markLine: {
+            silent: true,
+            symbol: ["none", "none"],
+            lineStyle: { color: "#c5c0b1", type: "dashed", width: 1 },
+            data: [
+              { xAxis: 55 },  // 垂直中线
+              { yAxis: 65 },  // 水平中线
+            ],
+            label: { show: false },
+          },
+          markArea: {
+            silent: true,
+            data: [
+              [
+                { coord: [55, 65], itemStyle: { color: "rgba(255,79,0,0.04)" } },
+                { coord: [85, 140] }
+              ],
+              [
+                { coord: [25, 0], itemStyle: { color: "rgba(197,192,177,0.08)" } },
+                { coord: [55, 65] }
+              ],
+            ]
+          }
+        },
+      ]
+    });
+
+    // 象限标签用 graphic 精准定位
+    chart.setOption({
+      graphic: [
+        { type:"text", left:"72%", top:"8%",  style:{ text:"文化强 · 扩散广", fill:"#ff4f00", fontSize:11, fontWeight:600, fontFamily:"STSong, serif" } },
+        { type:"text", left:"4%",  top:"8%",  style:{ text:"文化弱 · 扩散广", fill:"#b5b2aa", fontSize:11, fontFamily:"STSong, serif" } },
+        { type:"text", left:"72%", bottom:"8%", style:{ text:"文化强 · 扩散窄", fill:"#b5b2aa", fontSize:11, fontFamily:"STSong, serif" } },
+        { type:"text", left:"4%",  bottom:"8%", style:{ text:"文化弱 · 扩散窄", fill:"#b5b2aa", fontSize:11, fontFamily:"STSong, serif" } },
+      ]
+    });
+  }
+
+  // ============================================================
+  // 热力图：20城菜系 POI 分布
+  // ============================================================
+  const hmCities = ["北京","上海","广州","深圳","成都","重庆","杭州","南京","武汉","西安","长沙","福州","济南","合肥","苏州","宁波","厦门","郑州","沈阳","昆明"];
+  const hmCuisines = ["川菜","粤菜","湘菜","鲁菜","苏菜","浙菜","闽菜","徽菜"];
+
+  // 原始数据（行=城市，列=菜系顺序同上）
+  // 异常值修正：福州闽菜=1(非125)，厦门徽菜=6(非125)，福州徽菜=3(非125)
+  const hmRaw = [
+    [125,125,125,125,125,125, 15, 19], // 北京
+    [125,125,125, 47,125,125,125, 40], // 上海
+    [125,125,125, 29,  7,125,  2, 10], // 广州
+    [125,125,125, 20, 20,125,  8, 16], // 深圳
+    [125,125,122, 39,  1, 94,  3,  7], // 成都
+    [125,125, 83, 50,  3,122,  2, 11], // 重庆
+    [125,125,114, 32,125,125,  5, 23], // 杭州
+    [125,125, 57, 25, 89,125, 18,  9], // 南京
+    [125,125, 95, 26,  8,125,  2, 14], // 武汉
+    [125,125,105, 41, 31,125,  8,  9], // 西安
+    [125,125,110,  8,  4,125,  2,  5], // 长沙
+    [125,125, 67, 20,  4,116,  1,  3], // 福州（闽菜修正为1，徽菜修正为3）
+    [125,125, 32, 22, 55,110,  2,  4], // 济南
+    [125,125, 34, 17,125,125,  6,  3], // 合肥
+    [125,125,117, 28,125,125, 25, 18], // 苏州
+    [125,125, 75, 20,102,125,  7,  6], // 宁波
+    [125,125, 77,  7,  5,125,  1,  6], // 厦门（徽菜修正为6）
+    [125,125, 81, 40, 15,125,  6,  5], // 郑州
+    [125,125, 33, 14, 37, 66,  5,  3], // 沈阳
+    [125,125, 52,  5,  2,117,  0,  0], // 昆明
+  ];
+
+  // 转成 ECharts heatmap 格式 [cuisineIdx, cityIdx, value]
+  // 同时做归一化：每列（菜系）内归一化，消除川粤触顶的影响
+  function renderHeatmap() {
+    const chart = echarts.init(document.getElementById("heatmapChart"));
+
+    // 列归一化
+    const colMax = hmCuisines.map((_, ci) => Math.max(...hmRaw.map(row => row[ci])));
+    const data = [];
+    hmRaw.forEach((row, ri) => {
+      row.forEach((val, ci) => {
+        const norm = colMax[ci] > 0 ? Math.round(val / colMax[ci] * 100) : 0;
+        data.push([ci, ri, norm, val]);
+      });
+    });
+
+    chart.setOption({
+      backgroundColor: "transparent",
+      tooltip: {
+        formatter: p => {
+          const [ci, ri, norm] = p.data;
+          const raw = hmRaw[ri][ci];
+          return `<strong>${hmCities[ri]} · ${hmCuisines[ci]}</strong><br>餐厅数：${raw} 家<br>渗透率：<strong style="color:#ff4f00">${norm}%</strong>`;
+        },
+        backgroundColor:"#fffefb",
+        borderColor:"#c5c0b1",
+        textStyle:{color:"#2b2b2b",fontSize:13,fontFamily:"STSong, serif"},
+        padding:[10,14],
+      },
+      grid: { top: 40, bottom: 60, left: 60, right: 20 },
+      xAxis: {
+        type: "category",
+        data: hmCuisines,
+        axisLabel: { color: "#36342e", fontSize: 13, fontWeight: 600, fontFamily: "STSong, serif" },
+        axisLine: { lineStyle: { color: "#c5c0b1" } },
+        splitArea: { show: true, areaStyle: { color: ["#fdfaf2", "#f7f2e1"] } }
+      },
+      yAxis: {
+        type: "category",
+        data: hmCities,
+        axisLabel: { color: "#939084", fontSize: 12, fontFamily: "STSong, serif" },
+        axisLine: { lineStyle: { color: "#c5c0b1" } },
+        splitArea: { show: true, areaStyle: { color: ["#fdfaf2", "#f7f2e1"] } }
+      },
+      visualMap: {
+        min: 0, max: 100,
+        calculable: true,
+        orient: "horizontal",
+        left: "center",
+        bottom: 0,
+        inRange: { color: ["#fdfaf2", "#ffd4b8", "#ff9a5c", "#9d2933"] },
+        textStyle: { color: "#939084", fontSize: 11, fontFamily: "STSong, serif" },
+        text: ["高渗透", "低渗透"],
+      },
+      series: [{
+        type: "heatmap",
+        data: data.map(d => [d[0], d[1], d[2]]),
+        label: { show: false },
+        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: "rgba(255,79,0,0.3)" } }
+      }]
+    });
+  }
+
+  // ============================================================
+  // Sunburst 影响力画像
+  // ============================================================
+  const impactData = [
+    {cuisine:"川菜",color:"#e74c3c",dishes:[
+      {name:"麻婆豆腐",level:"S",score:91.87,technique:"炒",est:false},
+      {name:"宫保鸡丁",level:"S",score:91.34,technique:"炒",est:false},
+      {name:"夫妻肺片",level:"S",score:90.33,technique:"拌",est:false},
+      {name:"回锅肉",level:"S",score:82.23,technique:"炒",est:false},
+      {name:"担担面",level:"S",score:82.62,technique:"煮",est:false},
+      {name:"毛血旺",level:"S",score:85.20,technique:"煮",est:false},
+      {name:"酸菜鱼",level:"S",score:92.27,technique:"煮",est:false},
+      {name:"鱼香肉丝",level:"A",score:78.44,technique:"炒",est:false},
+      {name:"水煮鱼",level:"A",score:74.65,technique:"煮",est:false},
+      {name:"辣子鸡",level:"A",score:68.01,technique:"炸",est:false},
+      {name:"泡椒凤爪",level:"A",score:70.35,technique:"卤",est:true},
+      {name:"东坡肘子",level:"A",score:64.48,technique:"炖",est:true},
+      {name:"钟水饺",level:"A",score:58.60,technique:"煮",est:true},
+      {name:"龙抄手",level:"A",score:57.36,technique:"煮",est:false},
+      {name:"蒜泥白肉",level:"B",score:55.14,technique:"拌",est:false},
+      {name:"红油抄手",level:"B",score:53.44,technique:"煮",est:true},
+      {name:"口水鸡",level:"C",score:38.52,technique:"拌",est:true},
+    ]},
+    {cuisine:"粤菜",color:"#e67e22",dishes:[
+      {name:"蜜汁叉烧",level:"A",score:77.75,technique:"烤",est:true},
+      {name:"清蒸石斑鱼",level:"A",score:58.60,technique:"蒸",est:true},
+      {name:"潮州卤水鹅",level:"B",score:56.67,technique:"卤",est:true},
+      {name:"豉汁蒸排骨",level:"C",score:21.08,technique:"蒸",est:false},
+      {name:"糖醋咕噜肉",level:"C",score:38.52,technique:"炸",est:true},
+      {name:"红烧乳鸽",level:"C",score:38.52,technique:"烧",est:true},
+      {name:"干炒牛河",level:"C",score:40.67,technique:"炒",est:false},
+      {name:"盐焗鸡",level:"C",score:38.38,technique:"焗",est:false},
+      {name:"煲仔饭",level:"C",score:35.47,technique:"煲",est:false},
+      {name:"虾饺",level:"C",score:33.76,technique:"蒸",est:false},
+      {name:"肠粉",level:"C",score:29.86,technique:"蒸",est:false},
+      {name:"白切鸡",level:"C",score:24.51,technique:"煮",est:false},
+      {name:"深井烧鹅",level:"C",score:19.01,technique:"烤",est:false},
+      {name:"蚝烙",level:"C",score:27.58,technique:"煎",est:false},
+      {name:"顺德鱼生",level:"C",score:5.00,technique:"生",est:false},
+    ]},
+    {cuisine:"苏菜",color:"#f1c40f",dishes:[
+      {name:"松鼠鳜鱼",level:"S",score:81.85,technique:"炸",est:false},
+      {name:"水晶肴肉",level:"A",score:75.34,technique:"冻",est:false},
+      {name:"清炖蟹粉狮子头",level:"A",score:61.84,technique:"炖",est:true},
+      {name:"大煮干丝",level:"A",score:59.24,technique:"煮",est:false},
+      {name:"清蒸鲥鱼",level:"B",score:55.42,technique:"蒸",est:false},
+      {name:"软兜长鱼",level:"B",score:52.64,technique:"炒",est:false},
+      {name:"梁溪脆鳝",level:"B",score:51.44,technique:"炸",est:false},
+      {name:"蟹粉豆腐",level:"B",score:49.94,technique:"烩",est:true},
+      {name:"拆烩鲢鱼头",level:"B",score:48.56,technique:"烩",est:true},
+      {name:"文思豆腐",level:"B",score:56.67,technique:"煮",est:true},
+      {name:"三套鸭",level:"B",score:47.04,technique:"炖",est:true},
+      {name:"平桥豆腐",level:"B",score:44.39,technique:"烩",est:true},
+      {name:"叫花鸡",level:"C",score:17.23,technique:"烤",est:false},
+      {name:"南京盐水鸭",level:"C",score:5.17,technique:"卤",est:false},
+      {name:"扬州炒饭",level:"C",score:38.52,technique:"炒",est:true},
+    ]},
+    {cuisine:"闽菜",color:"#2ecc71",dishes:[
+      {name:"佛跳墙",level:"S",score:100.00,technique:"炖",est:false},
+      {name:"土笋冻",level:"S",score:89.77,technique:"冻",est:false},
+      {name:"荔枝肉",level:"A",score:68.66,technique:"炸",est:false},
+      {name:"沙茶面",level:"A",score:72.61,technique:"煮",est:false},
+      {name:"闽式炒米粉",level:"B",score:54.44,technique:"炒",est:true},
+      {name:"醉排骨",level:"B",score:48.56,technique:"炸",est:true},
+      {name:"闽南白斩鸡",level:"B",score:47.04,technique:"煮",est:true},
+      {name:"红糟鳗鱼",level:"B",score:44.39,technique:"炒",est:true},
+      {name:"鸡汤汆海蚌",level:"C",score:41.16,technique:"汆",est:true},
+      {name:"七星鱼丸",level:"C",score:38.52,technique:"煮",est:true},
+      {name:"福州扁肉",level:"C",score:38.52,technique:"煮",est:true},
+      {name:"海蛎煎",level:"C",score:38.38,technique:"煎",est:false},
+      {name:"姜母鸭",level:"C",score:33.15,technique:"炖",est:false},
+      {name:"淡糟香螺片",level:"C",score:35.29,technique:"炒",est:true},
+      {name:"南煎肝",level:"C",score:38.52,technique:"煎",est:true},
+    ]},
+    {cuisine:"浙菜",color:"#3498db",dishes:[
+      {name:"东坡肉",level:"S",score:91.39,technique:"炖",est:false},
+      {name:"西湖醋鱼",level:"A",score:78.09,technique:"烧",est:false},
+      {name:"宁波汤圆",level:"A",score:68.64,technique:"煮",est:true},
+      {name:"龙井虾仁",level:"A",score:62.87,technique:"炒",est:false},
+      {name:"宋嫂鱼羹",level:"A",score:67.32,technique:"烩",est:false},
+      {name:"梅干菜扣肉",level:"A",score:64.48,technique:"蒸",est:true},
+      {name:"油焖春笋",level:"A",score:58.60,technique:"焖",est:true},
+      {name:"蜜汁火方",level:"A",score:60.78,technique:"蒸",est:false},
+      {name:"荷叶粉蒸肉",level:"B",score:54.44,technique:"蒸",est:true},
+      {name:"雪菜大汤黄鱼",level:"B",score:51.79,technique:"炖",est:true},
+      {name:"干炸响铃",level:"B",score:48.56,technique:"炸",est:true},
+      {name:"清汤越鸡",level:"B",score:44.39,technique:"炖",est:true},
+      {name:"西湖莼菜汤",level:"B",score:47.04,technique:"煮",est:true},
+      {name:"奉化芋艿头",level:"C",score:42.98,technique:"蒸",est:false},
+    ]},
+    {cuisine:"湘菜",color:"#9b59b6",dishes:[
+      {name:"剁椒鱼头",level:"A",score:66.87,technique:"蒸",est:false},
+      {name:"毛氏红烧肉",level:"A",score:70.35,technique:"烧",est:true},
+      {name:"长沙臭豆腐",level:"A",score:74.52,technique:"炸",est:true},
+      {name:"口味虾",level:"A",score:66.71,technique:"炒",est:true},
+      {name:"农家小炒肉",level:"A",score:61.84,technique:"炒",est:true},
+      {name:"东安子鸡",level:"A",score:57.36,technique:"炒",est:false},
+      {name:"湘西腊肉",level:"A",score:58.60,technique:"炒",est:true},
+      {name:"湘西土匪猪蹄",level:"B",score:54.44,technique:"炖",est:true},
+      {name:"冰糖湘莲",level:"B",score:51.79,technique:"炖",est:true},
+      {name:"酸辣肚丝汤",level:"B",score:47.04,technique:"炖",est:true},
+      {name:"永州血鸭",level:"B",score:48.56,technique:"炒",est:true},
+      {name:"组庵鱼翅",level:"B",score:44.39,technique:"炖",est:true},
+      {name:"糖油粑粑",level:"C",score:42.43,technique:"炸",est:false},
+      {name:"猪血丸子",level:"C",score:40.92,technique:"炸",est:false},
+      {name:"腊味合蒸",level:"C",score:38.52,technique:"蒸",est:true},
+    ]},
+    {cuisine:"徽菜",color:"#1abc9c",dishes:[
+      {name:"臭鳜鱼",level:"A",score:68.64,technique:"烧",est:true},
+      {name:"李鸿章大杂烩",level:"A",score:61.84,technique:"烩",est:true},
+      {name:"虎皮毛豆腐",level:"B",score:48.56,technique:"炸",est:true},
+      {name:"火腿炖甲鱼",level:"B",score:47.04,technique:"炖",est:true},
+      {name:"刀板香",level:"B",score:45.33,technique:"蒸",est:true},
+      {name:"清蒸石鸡",level:"B",score:44.39,technique:"蒸",est:true},
+      {name:"徽州圆子",level:"B",score:44.39,technique:"炸",est:true},
+      {name:"无为板鸭",level:"B",score:46.21,technique:"卤",est:false},
+      {name:"石耳炖鸡",level:"C",score:43.40,technique:"炖",est:true},
+      {name:"红烧划水",level:"C",score:42.32,technique:"烧",est:true},
+      {name:"黄山炖鸽",level:"C",score:42.32,technique:"炖",est:true},
+      {name:"问政山笋",level:"C",score:41.16,technique:"炖",est:true},
+      {name:"绩溪一品锅",level:"C",score:41.16,technique:"炖",est:true},
+    ]},
+    {cuisine:"鲁菜",color:"#e91e63",dishes:[
+      {name:"九转大肠",level:"A",score:80.09,technique:"烧",est:false},
+      {name:"德州扒鸡",level:"A",score:73.53,technique:"卤",est:false},
+      {name:"糖醋鲤鱼",level:"A",score:64.31,technique:"炸",est:false},
+      {name:"拔丝苹果",level:"A",score:64.48,technique:"炸",est:true},
+      {name:"四喜丸子",level:"A",score:68.39,technique:"炸",est:false},
+      {name:"葱烧海参",level:"A",score:60.53,technique:"烧",est:false},
+      {name:"爆炒腰花",level:"B",score:56.67,technique:"爆",est:true},
+      {name:"坛子肉",level:"B",score:56.83,technique:"炖",est:false},
+      {name:"油爆双脆",level:"B",score:55.33,technique:"爆",est:false},
+      {name:"烩乌鱼蛋汤",level:"B",score:44.39,technique:"烩",est:true},
+      {name:"清汤燕窝",level:"B",score:48.56,technique:"炖",est:true},
+      {name:"锅烧肘子",level:"B",score:47.04,technique:"炸",est:true},
+      {name:"济南烤鸭",level:"B",score:46.96,technique:"烤",est:false},
+      {name:"奶汤蒲菜",level:"C",score:41.16,technique:"炖",est:true},
+      {name:"葱椒炝锅鱼",level:"C",score:42.32,technique:"炒",est:true},
+    ]},
+  ];
+
+  const levelColor = { S:"#FFD700", A:"#FFA040", B:"#6BAED6", C:"#969696" };
+
+  function buildSunburstData() {
+    return impactData.map(cuisine => ({
+      name: cuisine.cuisine,
+      itemStyle: { color: cuisine.color },
+      children: ["S","A","B","C"].map(level => {
+        const dishes = cuisine.dishes.filter(d => d.level === level);
+        if (!dishes.length) return null;
+        return {
+          name: level,
+          itemStyle: { color: levelColor[level] + "99" },
+          children: dishes.map(d => ({
+            name: d.name,
+            value: Math.max(d.score, 5),
+            itemStyle: { color: cuisine.color + (d.est ? "99" : "ee") },
+            // 附加信息挂在 extra 上
+            _technique: d.technique,
+            _score: d.score,
+            _est: d.est,
+            _cuisine: cuisine.cuisine,
+            _level: d.level,
+          }))
+        };
+      }).filter(Boolean)
+    }));
+  }
+
+  function renderSunburst() {
+    const chart = echarts.init(document.getElementById("sunburstChart"));
+    const detail  = document.getElementById("sunburst-detail");
+    const panel   = document.getElementById("sunburst-panel");
+    let activeCuisine = null;
+
+    // ── 方向4：侧边菜品列表 ──
+    function showCuisinePanel(cuisineName) {
+      activeCuisine = cuisineName;
+      const cuisine = impactData.find(c => c.cuisine === cuisineName);
+      if (!cuisine) return;
+
+      const levelColors = { S:"#ff4f00", A:"#e67e22", B:"#3498db", C:"#939084" };
+      const sorted = [...cuisine.dishes].sort((a,b) => b.score - a.score);
+
+      panel.innerHTML = `<div class="sunburst-panel-title">${cuisineName} · ${cuisine.dishes.length}道</div>` +
+        sorted.map(d => `
+          <div class="sunburst-dish-item" data-dish="${d.name}">
+            <span class="dish-level-badge" style="background:${levelColors[d.level]}22;color:${levelColors[d.level]}">${d.level}</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</span>
+            <div class="dish-score-bar">
+              <div class="dish-score-fill" style="width:${d.score}%;background:${cuisine.color}"></div>
+            </div>
+          </div>`
+        ).join("");
+
+      // 点击侧边列表项高亮对应扇形
+      panel.querySelectorAll(".sunburst-dish-item").forEach(el => {
+        el.addEventListener("click", () => {
+          panel.querySelectorAll(".sunburst-dish-item").forEach(e => e.classList.remove("active"));
+          el.classList.add("active");
+          const dishName = el.dataset.dish;
+          const dish = cuisine.dishes.find(d => d.name === dishName);
+          if (dish) {
+            detail.innerHTML = `
+              <strong style="color:var(--accent);font-size:16px">${dish.name}</strong><br>
+              菜系：${cuisineName} &nbsp;·&nbsp; 等级：<strong style="color:${levelColors[dish.level]}">${dish.level}</strong>
+              &nbsp;·&nbsp; 烹饪技法：${dish.technique}<br>
+              影响力得分：<strong style="color:var(--accent)">${dish.score.toFixed(1)}</strong> / 100
+            `;
+            detail.classList.add("visible");
+          }
+        });
+      });
+    }
+
+    function clearPanel() {
+      activeCuisine = null;
+      panel.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding-top:20px;text-align:center;line-height:1.8">点击菜系环<br>查看该菜系所有菜品</div>`;
+      detail.classList.remove("visible");
+    }
+
+    clearPanel();
+
+    // ── 方向3：三环依次展开动画 ──
+    // 先只渲染第1环，再依次展开
+    const baseOption = {
+      backgroundColor: "transparent",
+      tooltip: { show: false },
+      series: [{
+        type: "sunburst",
+        data: buildSunburstData(),
+        radius: ["8%", "95%"],
+        sort: "desc",
+        animationType: "expansion",
+        animationDuration: 800,
+        animationEasing: "cubicOut",
+        emphasis: {
+          focus: "ancestor",
+          itemStyle: { shadowBlur: 24, shadowColor: "rgba(255,79,0,0.25)" }
+        },
+        levels: [
+          {},
+          {
+            r0: "8%", r: "30%",
+            label: { align: "center", fontSize: 14, fontWeight: 700, color: "#fff", fontFamily:"STSong, serif" },
+            itemStyle: { borderWidth: 3, borderColor: "#fdfaf2" }
+          },
+          {
+            r0: "31%", r: "46%",
+            label: { align: "center", fontSize: 12, fontWeight: 600, color: "#fff", rotate: "tangential", fontFamily:"STSong, serif" },
+            itemStyle: { borderWidth: 2, borderColor: "#fdfaf2" }
+          },
+          {
+            r0: "47%", r: "95%",
+            label: { show: false },
+            itemStyle: { borderWidth: 1, borderColor: "#fdfaf222" }
+          }
+        ],
+        nodeClick: "zoomToNode",
+      }]
+    };
+
+    chart.setOption(baseOption);
+
+    // ── 方向4：点击菜系环高亮 + 其余变灰 ──
+    chart.on("click", (params) => {
+      const d = params.data;
+      if (!d) return;
+
+      // 点击菜系环（第1层，无 _cuisine 字段）
+      if (!d._cuisine && !d._technique) {
+        const cuisineName = d.name;
+        const isSame = activeCuisine === cuisineName;
+
+        if (isSame) {
+          // 再次点击同一菜系 → 取消高亮
+          chart.setOption({ series: [{ data: buildSunburstData() }] });
+          clearPanel();
+          return;
+        }
+
+        // 高亮选中菜系，其余变灰
+        const highlighted = buildSunburstData().map(c => {
+          if (c.name === cuisineName) return c;
+          return {
+            ...c,
+            itemStyle: { color: "#eceae3" },
+            children: c.children.map(lvl => ({
+              ...lvl,
+              itemStyle: { color: "#eceae3" },
+              children: lvl.children.map(dish => ({
+                ...dish,
+                itemStyle: { color: "#eceae3" }
+              }))
+            }))
+          };
+        });
+        chart.setOption({ series: [{ data: highlighted }] });
+        showCuisinePanel(cuisineName);
+        detail.classList.remove("visible");
+        return;
+      }
+
+      // 点击菜名扇形（叶节点）
+      if (d._technique) {
+        const lc = { S:"#ff4f00", A:"#e67e22", B:"#3498db", C:"#939084" };
+        detail.innerHTML = `
+          <strong style="color:var(--accent);font-size:16px">${d.name}</strong><br>
+          菜系：${d._cuisine} &nbsp;·&nbsp; 等级：<strong style="color:${lc[d._level]}">${d._level}</strong>
+          &nbsp;·&nbsp; 烹饪技法：${d._technique}<br>
+          影响力得分：<strong style="color:var(--accent)">${d._score.toFixed(1)}</strong> / 100
+          &nbsp;（基于中文维基百科 2024 年月均页面浏览量）
+        `;
+        detail.classList.add("visible");
+
+        // 同步高亮侧边列表
+        if (d._cuisine !== activeCuisine) showCuisinePanel(d._cuisine);
+        panel.querySelectorAll(".sunburst-dish-item").forEach(el => {
+          el.classList.toggle("active", el.dataset.dish === d.name);
+        });
+      }
+    });
+  }
+
+  // ============================================================
+
+  // 滚动动画
+  function initScroll() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add("visible");
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll(".screen").forEach(s => observer.observe(s));
+  }
+
+  // 市场热度趋势图
+  const marketData = {
+    years: [2015, 2017, 2019, 2021, 2023, 2025],
+    series: [
+      { name:"川菜",  data:[85,90,95,100,105,108], share:21.0, color:"#e74c3c" },
+      { name:"粤菜",  data:[80,82,85,88,90,92],    share:18.5, color:"#e67e22" },
+      { name:"湘菜",  data:[65,75,85,92,95,98],    share:11.0, color:"#9b59b6" },
+      { name:"苏菜",  data:[60,62,65,68,70,72],    share:12.0, color:"#f1c40f" },
+      { name:"鲁菜",  data:[58,60,62,63,65,66],    share:10.5, color:"#e91e63" },
+      { name:"浙菜",  data:[55,58,62,65,68,70],    share:8.0,  color:"#3498db" },
+      { name:"闽菜",  data:[45,48,50,52,54,55],    share:6.5,  color:"#2ecc71" },
+      { name:"徽菜",  data:[40,42,44,46,48,50],    share:5.5,  color:"#1abc9c" },
+    ]
+  };
+
+  function renderMarket() {
+    // 折线图
+    const chart = echarts.init(document.getElementById("trendChart"));
+    chart.setOption({
+backgroundColor:"transparent",tooltip:{trigger:"axis",backgroundColor:"#fdfaf2",borderColor:"#c5c0b1",textStyle:{color:"#2b2b2b",fontFamily:"STSong, serif"}},legend:{data:marketData.series.map(s=>s.name),textStyle:{color:"#36342e",fontSize:12,fontFamily:"STSong, serif"},top:0},grid:{left:"5%",right:"5%",bottom:"8%",top:"50px",containLabel:true},xAxis:{type:"category",data:marketData.years,axisLine:{lineStyle:{color:"#c5c0b1"}},axisLabel:{color:"#939084",fontFamily:"STSong, serif"}},yAxis:{name:"热度指数",nameTextStyle:{color:"#939084",fontFamily:"STSong, serif"},axisLine:{lineStyle:{color:"#c5c0b1"}},axisLabel:{color:"#939084",fontFamily:"STSong, serif"},splitLine:{lineStyle:{color:"#eceae3"}}},
+      series: marketData.series.map(s => ({
+        name: s.name, type:"line", data: s.data, smooth:true,
+        lineStyle:{color:s.color, width:2},
+        itemStyle:{color:s.color},
+        areaStyle:{color:s.color+"15"}
+      }))
+    });
+
+    // 门店占比卡片
+    const cards = document.getElementById("marketCards");
+    const sorted = [...marketData.series].sort((a,b)=>b.share-a.share);
+    sorted.forEach(s => {
+      cards.innerHTML += `
+        <div class="market-card">
+          <div class="mc-name" style="color:${s.color}">${s.name}</div>
+          <div class="mc-bar-wrap">
+            <div class="mc-bar" style="width:${(s.share/21*100).toFixed(0)}%;background:${s.color}"></div>
+          </div>
+          <div class="mc-share">${s.share}%</div>
+        </div>`;
+    });
+  }
+
+  // 初始化
+  function init() {
+    const fns = [renderGeo, renderIngredients, renderRadars,
+      renderDishes, renderTimeline, renderMarket, renderHeatmap,
+      renderBridge, renderSunburst, renderFinalRadar];
+    fns.forEach(fn => {
+      try { fn(); }
+      catch(e) { console.error(fn.name + ' FAILED:', e.message, e.stack); }
+    });
+    initScroll();
+    // 第1屏直接显示，不依赖 IntersectionObserver
+    document.getElementById("screen1").classList.add("visible");
+  }
+
+  window.addEventListener("load", init);
+  </script>
+  </body>
+  </html>

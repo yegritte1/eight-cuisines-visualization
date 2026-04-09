@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百味荟萃 · 内容目录</title>
+    <link href="./libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --paper-bg: #f5f0e8;
+            --ink-dark: #2d1f1a;
+            --ink-medium: #5a4a42;
+            --red-primary: #c8302e;
+            --red-light: #e85d5d;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'SimSun', 'FangSong', serif;
+            background: var(--paper-bg);
+            color: var(--ink-dark);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 纸张纹理 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(40,30,20,0.03) 1px, transparent 1px),
+                radial-gradient(circle at 70% 60%, rgba(40,30,20,0.02) 1px, transparent 1px),
+                radial-gradient(circle at 40% 80%, rgba(40,30,20,0.025) 1px, transparent 1px);
+            background-size: 80px 80px, 60px 60px, 100px 100px;
+            pointer-events: none;
+            opacity: 0.6;
+            z-index: 1;
+        }
+
+        /* 主容器 */
+        .container {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 60px;
+            overflow: hidden;
+        }
+
+        /* 返回按钮 */
+        .back-home {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-home:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-home svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--red-primary);
+            stroke-width: 2.5;
+            fill: none;
+        }
+
+        /* 标题区 */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 900;
+            letter-spacing: 0.3em;
+            color: var(--red-primary);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+            color: var(--ink-medium);
+            letter-spacing: 0.3em;
+        }
+
+        /* 目录列表容器 */
+        .catalog-list {
+            max-width: 750px;
+            width: 100%;
+            max-height: 62vh;
+            overflow-y: auto;
+            padding-right: 20px;
+        }
+
+        /* 自定义滚动条 */
+        .catalog-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .catalog-list::-webkit-scrollbar-track {
+            background: rgba(200, 48, 46, 0.05);
+            border-radius: 3px;
+        }
+
+        .catalog-list::-webkit-scrollbar-thumb {
+            background: rgba(200, 48, 46, 0.3);
+            border-radius: 3px;
+        }
+
+        .catalog-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(200, 48, 46, 0.5);
+        }
+
+        /* 分类标题 */
+        .category-title {
+            font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+            font-weight: 700;
+            color: var(--red-primary);
+            letter-spacing: 0.2em;
+            margin: 25px 0 15px 0;
+            padding-left: 10px;
+            border-left: 4px solid var(--red-primary);
+            animation: fadeIn 0.6s ease-out backwards;
+        }
+
+        .category-title:first-child {
+            margin-top: 0;
+        }
+
+        /* 目录项 */
+        .catalog-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 0;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(200, 48, 46, 0.08);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.5s ease-out backwards;
+        }
+
+        .catalog-item:hover {
+            padding-left: 15px;
+            border-bottom-color: var(--red-primary);
+        }
+
+        .catalog-item:hover .item-number {
+            color: var(--red-primary);
+        }
+
+        .catalog-item:hover .item-title {
+            color: var(--red-primary);
+        }
+
+        /* 序号 */
+        .item-number {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--red-primary);
+            opacity: 0.5;
+            min-width: 50px;
+            transition: all 0.3s ease;
+        }
+
+        /* 标题 */
+        .item-title {
+            font-size: clamp(1.05rem, 1.9vw, 1.3rem);
+            font-weight: 600;
+            color: var(--ink-dark);
+            letter-spacing: 0.08em;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        /* 箭头 */
+        .item-arrow {
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+            color: var(--red-primary);
+            font-size: 1.2rem;
+        }
+
+        .catalog-item:hover .item-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* 动画延迟 */
+        .category-title:nth-of-type(1) { animation-delay: 0.1s; }
+        .category-title:nth-of-type(2) { animation-delay: 0.35s; }
+        .category-title:nth-of-type(3) { animation-delay: 0.6s; }
+
+        .catalog-item:nth-child(2) { animation-delay: 0.15s; }
+        .catalog-item:nth-child(3) { animation-delay: 0.2s; }
+        .catalog-item:nth-child(5) { animation-delay: 0.4s; }
+        .catalog-item:nth-child(6) { animation-delay: 0.45s; }
+        .catalog-item:nth-child(7) { animation-delay: 0.5s; }
+        .catalog-item:nth-child(9) { animation-delay: 0.65s; }
+        .catalog-item:nth-child(10) { animation-delay: 0.7s; }
+        .catalog-item:nth-child(12) { animation-delay: 0.75s; }
+
+        /* 动画 */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 60px 30px;
+            }
+
+            .catalog-list {
+                max-height: 65vh;
+                padding-right: 10px;
+            }
+
+            .catalog-item {
+                padding: 14px 0;
+            }
+
+            .category-title {
+                margin: 20px 0 12px 0;
+                font-size: 0.95rem;
+            }
+
+            .item-number {
+                min-width: 40px;
+                font-size: 1rem;
+            }
+        }
+
+        /* 减少动画 */
+        @media (prefers-reduced-motion: reduce) {
+            .header,
+            .catalog-item,
+            .category-title {
+                animation: none;
+            }
+
+            .catalog-item:hover {
+                padding-left: 0;
+            }
+
+            .item-arrow {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 返回封面按钮 -->
+    <a href="menu.html" class="back-home" title="返回封面">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+    <div class="container">
+        <!-- 标题 -->
+        <header class="header">
+            <h1 class="title">内容目录</h1>
+            <p class="subtitle">八大菜系数据可视化</p>
+        </header>
+
+        <!-- 目录列表 -->
+        <div class="catalog-list">
+            <!-- 第一部分：地域与分布 -->
+            <h2 class="category-title">地域与分布</h2>
+
+            <a href="pages/各省菜系占比可视化.html" class="catalog-item">
+                <span class="item-number">壹</span>
+                <span class="item-title">地域分布地图</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <a href="pages/八大菜系气泡图.html" class="catalog-item">
+                <span class="item-number">贰</span>
+                <span class="item-title">菜系特色气泡图</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <!-- 第二部分：历史与传承 -->
+            <h2 class="category-title">历史与传承</h2>
+
+            <a href="pages/八大菜系溯源图谱.html" class="catalog-item">
+                <span class="item-number">叁</span>
+                <span class="item-title">菜系溯源图谱</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <a href="pages/八大菜系历史演变.html" class="catalog-item">
+                <span class="item-number">肆</span>
+                <span class="item-title">历史演变时间线</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <!-- 第三部分：技法与风味 -->
+            <h2 class="category-title">技法与风味</h2>
+
+            <a href="pages/pengren.html" class="catalog-item">
+                <span class="item-number">伍</span>
+                <span class="item-title">烹饪方法桑基图</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <a href="pages/口味经纬度图.html" class="catalog-item">
+                <span class="item-number">陆</span>
+                <span class="item-title">口味经纬度图</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <a href="pages/菜品.html" class="catalog-item">
+                <span class="item-number">柒</span>
+                <span class="item-title">代表菜品雷达图</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <!-- 第四部分：趣味互动 -->
+            <h2 class="category-title">趣味互动</h2>
+
+            <a href="pages/八大菜系转盘.html" class="catalog-item">
+                <span class="item-number">捌</span>
+                <span class="item-title">今晚吃什么转盘</span>
+                <span class="item-arrow">→</span>
+            </a>
+
+            <a href="pages/双测试页面.html" class="catalog-item">
+                <span class="item-number">玖</span>
+                <span class="item-title">综合对比测试</span>
+                <span class="item-arrow">→</span>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雅食录 · 八大菜系</title>
+    <link href="../libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-paper: #f7f4ed;
+            --ink-black: #1a1a1a;
+            --ink-gray: #4a4a4a;
+            --ink-light: #9a9a9a;
+            --accent-red: #8b0000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'SimSun', '宋体', serif;
+            background-color: var(--bg-paper);
+            background-image: radial-gradient(#e6e2d8 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--ink-black);
+            overflow: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* 宣纸纹理 */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://www.transparenttextures.com/patterns/handmade-paper.png');
+            pointer-events: none;
+            opacity: 0.4;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: clamp(1.8rem, 5vw, 2.8rem);
+            color: var(--ink-black);
+            font-weight: 700;
+            letter-spacing: 0.4em;
+            margin-bottom: 0.5rem;
+            border-bottom: 1.5px solid var(--ink-black);
+            display: inline-block;
+            padding-bottom: 0.3rem;
+        }
+
+        .header p {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            color: var(--ink-gray);
+            letter-spacing: 0.2em;
+            margin-top: 8px;
+        }
+
+        #bubbleCanvas {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 140px);
+            cursor: default;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background-color: #fffdf9;
+            margin: 8% auto;
+            padding: 2.5rem;
+            border: 1px solid var(--ink-black);
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.4s ease;
+        }
+
+        .modal-content::after {
+            content: "雅食";
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 36px;
+            height: 36px;
+            border: 1.5px solid var(--accent-red);
+            color: var(--accent-red);
+            font-size: 12px;
+            line-height: 1.2;
+            padding: 3px;
+            text-align: center;
+            font-weight: bold;
+            opacity: 0.5;
+            transform: rotate(-10deg);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            color: var(--ink-light);
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close:hover {
+            color: var(--ink-black);
+        }
+
+        .modal-header {
+            text-align: left;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid var(--ink-black);
+            padding-left: 1rem;
+        }
+
+        .modal-header h2 {
+            font-size: 2rem;
+            color: var(--ink-black);
+            margin-bottom: 0.2rem;
+        }
+
+        .cuisine-tag {
+            font-size: 0.85rem;
+            color: var(--ink-gray);
+            letter-spacing: 0.1em;
+        }
+
+        .modal-body {
+            line-height: 1.8;
+            color: var(--ink-gray);
+            font-size: 1rem;
+        }
+
+        .section {
+            margin-bottom: 1.2rem;
+        }
+
+        .section-title {
+            font-weight: 700;
+            color: var(--ink-black);
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--ink-black);
+            margin-right: 8px;
+            transform: rotate(45deg);
+        }
+
+        .section-content {
+            padding-left: 1rem;
+            text-align: justify;
+        }
+
+        /* 图例 */
+        .legend {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+            justify-content: center;
+            z-index: 100;
+            padding: 0.4rem 1rem;
+            background: rgba(247, 244, 237, 0.8);
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--ink-gray);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(26, 26, 26, 0.9);
+            color: #fff;
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                padding: 1.5rem;
+                width: 92%;
+            }
+            .legend {
+                gap: 0.6rem;
+                bottom: 5px;
+            }
+        }
+    
+        /* 返回按钮 - 小箭头样式 */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: #c8302e;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+        <!-- 返回按钮 -->
+    <a href="../catalog.html" class="back-button" title="返回目录">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+<div class="header">
+        <h1>雅食录</h1>
+        <p>八大菜系 · 众之所望</p>
+    </div>
+
+    <canvas id="bubbleCanvas"></canvas>
+
+    <div class="legend" id="legendContainer"></div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <div id="dishModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-header">
+                <h2 id="dishName"></h2>
+                <div class="cuisine-tag" id="cuisineTag"></div>
+            </div>
+            <div class="modal-body">
+                <div class="section">
+                    <div class="section-title">风味</div>
+                    <div class="section-content" id="dishFlavor"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">记略</div>
+                    <div class="section-content" id="dishDescription"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 低饱和度中国传统色配色
+        const cuisineColors = {
+            '川菜': 'rgba(180, 140, 140, 0.5)',   // 灰红
+            '鲁菜': 'rgba(180, 160, 140, 0.5)',   // 灰褐
+            '粤菜': 'rgba(190, 185, 140, 0.5)',   // 灰黄
+            '苏菜': 'rgba(150, 175, 150, 0.5)',   // 灰绿
+            '闽菜': 'rgba(140, 160, 185, 0.5)',   // 灰蓝
+            '浙菜': 'rgba(165, 160, 185, 0.5)',   // 灰紫
+            '湘菜': 'rgba(195, 155, 145, 0.5)',   // 灰橙
+            '徽菜': 'rgba(160, 170, 160, 0.5)'    // 灰艾
+        };
+
+        const dishesBaseData = [
+            { name: '宫保鸡丁', cuisine: '川菜', popularity: 95, flavor: '麻辣鲜香，酸甜适中', description: '川菜经典代表，以花生、干辣椒、鸡肉为主料，麻辣味浓，口感酥脆。源于清朝官员丁宝桢，故名宫保。' },
+            { name: '麻婆豆腐', cuisine: '川菜', popularity: 92, flavor: '麻辣鲜烫，豆香浓郁', description: '川菜代表菜品，豆腐嫩滑，麻辣味浓，是川菜"麻辣鲜香"的典型体现。' },
+            { name: '水煮鱼', cuisine: '川菜', popularity: 88, flavor: '麻辣鲜嫩，油而不腻', description: '川菜新派代表，鱼肉滑嫩，麻辣过瘾，是现代川菜的创新经典。' },
+            { name: '回锅肉', cuisine: '川菜', popularity: 85, flavor: '肥而不腻，香辣适口', description: '川菜传统名菜，猪肉经过两次烹制，肥而不腻，配以豆瓣酱和蒜苗。' },
+            { name: '糖醋鲤鱼', cuisine: '鲁菜', popularity: 87, flavor: '酸甜适口，外焦里嫩', description: '鲁菜经典，选用黄河鲤鱼，外皮酥脆，内里鲜嫩，糖醋汁浓郁。' },
+            { name: '葱烧海参', cuisine: '鲁菜', popularity: 82, flavor: '鲜美柔软，葱香浓郁', description: '鲁菜高档菜品，海参软糯，葱香浓郁，体现鲁菜对食材本味的尊重。' },
+            { name: '九转大肠', cuisine: '鲁菜', popularity: 76, flavor: '酸甜苦辣咸五味俱全', description: '鲁菜名菜，制作工艺复杂，经过九次翻炒，口味层次丰富。' },
+            { name: '白切鸡', cuisine: '粤菜', popularity: 90, flavor: '鲜嫩清淡，皮爽肉滑', description: '粤菜代表，保持鸡肉原汁原味，皮脆肉滑，体现粤菜"清淡鲜美"特色。' },
+            { name: '蜜汁叉烧', cuisine: '粤菜', popularity: 86, flavor: '甜中带咸，外焦里嫩', description: '粤菜烧腊名菜，色泽红亮，甜咸适中，是广式烧味的代表。' },
+            { name: '脆皮烧鹅', cuisine: '粤菜', popularity: 84, flavor: '皮脆肉嫩，香味浓郁', description: '粤菜经典烧味，鹅皮金黄酥脆，肉质鲜嫩多汁。' },
+            { name: '松鼠桂鱼', cuisine: '苏菜', popularity: 88, flavor: '酸甜可口，外脆里嫩', description: '苏菜代表，桂鱼刀工精细，造型如松鼠，酸甜口味深受喜爱。' },
+            { name: '狮子头', cuisine: '苏菜', popularity: 85, flavor: '肥而不腻，入口即化', description: '苏菜传统名菜，肉丸松软，口感细腻，体现苏菜的精细刀工。' },
+            { name: '佛跳墙', cuisine: '闽菜', popularity: 91, flavor: '鲜香醇厚，营养丰富', description: '闽菜之首，集海参、鲍鱼、花胶等多种珍贵食材，汤浓味醇。' },
+            { name: '荔枝肉', cuisine: '闽菜', popularity: 83, flavor: '酸甜清爽，形似荔枝', description: '闽菜特色，猪肉切花刀，形似荔枝，酸甜口味，色泽诱人。' },
+            { name: '西湖醋鱼', cuisine: '浙菜', popularity: 89, flavor: '酸甜适口，鱼肉鲜嫩', description: '浙菜代表，草鱼鲜嫩，酸甜汁浓，是杭州名菜之首。' },
+            { name: '东坡肉', cuisine: '浙菜', popularity: 87, flavor: '肥而不腻，酥软可口', description: '浙菜经典，以苏东坡命名，色泽红亮，入口即化，肥而不腻。' },
+            { name: '剁椒鱼头', cuisine: '湘菜', popularity: 93, flavor: '辣而不燥，鲜美嫩滑', description: '湘菜代表，剁椒鲜辣，鱼肉细嫩，是湘菜"香辣"特色的典范。' },
+            { name: '臭鳜鱼', cuisine: '徽菜', popularity: 79, flavor: '闻着臭，吃着香', description: '徽菜代表，鳜鱼经过腌制，独特风味，鲜嫩可口，是徽州特色。' }
+        ];
+
+        // 复制多份数据，填充空间
+        const dishesData = [...dishesBaseData, ...dishesBaseData, ...dishesBaseData];
+
+        const canvas = document.getElementById('bubbleCanvas');
+        const ctx = canvas.getContext('2d');
+        const modal = document.getElementById('dishModal');
+        const tooltip = document.getElementById('tooltip');
+        const legendContainer = document.getElementById('legendContainer');
+
+        let bubbles = [];
+        let animationId;
+
+        function initLegend() {
+            legendContainer.innerHTML = '';
+            Object.entries(cuisineColors).forEach(([name, color]) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `<div class="legend-dot" style="background-color: ${color}"></div><span>${name}</span>`;
+                legendContainer.appendChild(item);
+            });
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 140;
+            initBubbles();
+        }
+
+        function initBubbles() {
+            bubbles = [];
+            dishesData.forEach((dish) => {
+                // 显著增大大小差异
+                const radius = Math.pow((dish.popularity - 65) / 10, 2.2) * 6 + 12;
+                const x = Math.random() * (canvas.width - radius * 2) + radius;
+                const y = Math.random() * (canvas.height - radius * 2) + radius;
+
+                bubbles.push({
+                    x, y, radius,
+                    baseRadius: radius,
+                    targetRadius: radius,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.3,
+                    data: dish,
+                    color: cuisineColors[dish.cuisine],
+                    hovered: false
+                });
+            });
+        }
+
+        function drawBubble(bubble) {
+            const { x, y, radius, data, color, hovered } = bubble;
+            ctx.save();
+
+            // 恢复简单的圆
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+            // 简单的径向渐变，保持低饱和度
+            const grad = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius);
+            grad.addColorStop(0, color);
+            grad.addColorStop(1, color.replace('0.5', '0.2'));
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // 边框
+            ctx.strokeStyle = color.replace('0.5', '0.8');
+            ctx.lineWidth = hovered ? 2 : 1;
+            ctx.stroke();
+
+            // 文本 - 确保绝对清晰
+            ctx.globalAlpha = 1;
+            const fontSize = Math.max(12, radius / 3.4);
+            ctx.font = `bold ${fontSize}px "Noto Serif SC", serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // 文字描边增强清晰度
+            ctx.strokeStyle = 'rgba(247, 244, 237, 0.7)';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(data.name, x, y);
+
+            ctx.fillStyle = '#111';
+            ctx.fillText(data.name, x, y);
+
+            if (radius > 32) {
+                ctx.font = `500 ${fontSize * 0.65}px "Noto Serif SC", serif`;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillText(data.popularity, x, y + fontSize * 1.15);
+            }
+
+            ctx.restore();
+        }
+
+        function update() {
+            bubbles.forEach(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+
+                if (b.x - b.radius < 0 || b.x + b.radius > canvas.width) b.vx *= -1;
+                if (b.y - b.radius < 0 || b.y + b.radius > canvas.height) b.vy *= -1;
+
+                for (let other of bubbles) {
+                    if (other === b) continue;
+                    const dx = other.x - b.x;
+                    const dy = other.y - b.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = b.radius + other.radius + 8;
+                    if (dist < minDist) {
+                        const angle = Math.atan2(dy, dx);
+                        const force = (minDist - dist) * 0.0005;
+                        b.vx -= Math.cos(angle) * force;
+                        b.vy -= Math.sin(angle) * force;
+                    }
+                }
+
+                b.radius += (b.targetRadius - b.radius) * 0.1;
+            });
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            update();
+            bubbles.forEach(drawBubble);
+            animationId = requestAnimationFrame(animate);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            let anyHovered = false;
+            bubbles.forEach(bubble => {
+                const dx = mouseX - bubble.x;
+                const dy = mouseY - bubble.y;
+                if (Math.sqrt(dx * dx + dy * dy) < bubble.radius) {
+                    bubble.hovered = true;
+                    bubble.targetRadius = bubble.baseRadius * 1.2;
+                    anyHovered = true;
+
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = e.clientX + 15 + 'px';
+                    tooltip.style.top = e.clientY + 15 + 'px';
+                    tooltip.textContent = `${bubble.data.cuisine} · 人气 ${bubble.data.popularity}`;
+                } else {
+                    bubble.hovered = false;
+                    bubble.targetRadius = bubble.baseRadius;
+                }
+            });
+
+            canvas.style.cursor = anyHovered ? 'pointer' : 'default';
+            if (!anyHovered) tooltip.style.display = 'none';
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            bubbles.forEach(bubble => {
+                const dx = mouseX - bubble.x;
+                const dy = mouseY - bubble.y;
+                if (Math.sqrt(dx * dx + dy * dy) < bubble.radius) {
+                    showModal(bubble.data);
+                }
+            });
+        });
+
+        function showModal(dish) {
+            document.getElementById('dishName').textContent = dish.name;
+            document.getElementById('cuisineTag').textContent = dish.cuisine + ' · 雅食名点';
+            document.getElementById('dishFlavor').textContent = dish.flavor;
+            document.getElementById('dishDescription').textContent = dish.description;
+            modal.style.display = 'block';
+        }
+
+        document.querySelector('.close').onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; };
+        window.addEventListener('resize', resizeCanvas);
+
+        initLegend();
+        resizeCanvas();
+        animate();
+    </script>
+</body>
+</html>

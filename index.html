@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0; url=menu.html">
+    <title>跳转中...</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f1e8 0%, #e8dfd0 100%);
+            font-family: 'STSong', 'Noto Serif SC', serif;
+        }
+        .loading {
+            text-align: center;
+            color: #6b5a4d;
+        }
+        .loading h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            letter-spacing: 0.3em;
+        }
+        .loading p {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <h1>百味荟萃</h1>
+        <p>正在进入...</p>
+    </div>
+    <script>
+        // 如果 meta refresh 不起作用，使用 JavaScript 跳转
+        setTimeout(function() {
+            window.location.href = 'menu.html';
+        }, 100);
+    </script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华夏饮食文化地图</title>
+    <script src="../libs/tailwind/tailwind.js"></script>
+    <script src="../libs/echarts/echarts.min.js"></script>
+    <link href="../libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+
+        body {
+            font-family: 'Noto Serif SC', 'SimSun', '宋体', serif;
+            background: linear-gradient(135deg, #faf7f0 0%, #f5f0e8 50%, #f0ebe3 100%);
+            color: #3e2723;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #5d4037;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.1em;
+            border-left: 4px solid #c4b5a0;
+            padding-left: 10px;
+        }
+    
+        /* 返回按钮 - 小箭头样式 */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: #c8302e;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+        <!-- 返回按钮 -->
+    <a href="../catalog.html" class="back-button" title="返回目录">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+<div class="h-screen flex flex-col p-6 overflow-hidden">
+        <!-- Header -->
+        <header class="mb-4 flex-shrink-0">
+            <h1 class="text-3xl font-bold tracking-widest text-[#5d4037] text-center">
+                华夏饮食文化地图
+            </h1>
+            <p class="text-[#6d4c41] text-sm mt-1 text-center opacity-80">
+                八大菜系 · 三十四省 · 餐馆分布占比
+            </p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex flex-1 gap-8 min-h-0">
+            <!-- Left Panel -->
+            <div class="w-[32%] flex flex-col gap-6">
+                <!-- Market Share Pie -->
+                <div class="flex-1 min-h-0 flex flex-col">
+                    <h3 class="chart-title flex-shrink-0">八大菜系市场占比</h3>
+                    <div id="market-share-chart" class="flex-1"></div>
+                </div>
+                <!-- Trend Line -->
+                <div class="flex-1 min-h-0 flex flex-col">
+                    <h3 class="chart-title flex-shrink-0">菜系热度年度变化</h3>
+                    <div id="trend-chart" class="flex-1"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="flex-1 flex flex-col relative">
+                <h3 class="chart-title flex-shrink-0">各省菜系占比分布</h3>
+                <div id="china-map" class="flex-1"></div>
+
+                <!-- Map Legend -->
+                <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-white/70 backdrop-blur-md px-8 py-3 rounded-full border border-[#d4c4b0] shadow-md z-10">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #C08497; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">川菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #8E9AAF; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">粤菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #E9C46A; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">湘菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #B5C99A; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">苏菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #87BBA2; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">浙菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #8395A7; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">鲁菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #A5A5A5; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">闽菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full" style="background: #D1D5DB; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">徽菜</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-full border border-[#d4c4b0]" style="background: #F3F4F6;"></span>
+                        <span class="text-xs font-semibold text-[#5d4037]">其他</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-2 text-center flex-shrink-0">
+            <p class="text-[10px] text-[#8d6e63] opacity-60">
+                数据来源：红餐产业研究院《中国餐饮品类发展报告2025》 · 仅供参考学习
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // 1. 全局配置与颜色
+        const colorMap = {
+            '川菜': '#C08497',
+            '粤菜': '#8E9AAF',
+            '湘菜': '#E9C46A',
+            '苏菜': '#B5C99A',
+            '浙菜': '#87BBA2',
+            '鲁菜': '#8395A7',
+            '闽菜': '#A5A5A5',
+            '徽菜': '#D1D5DB',
+            '其他': '#F3F4F6'
+        };
+
+        const provinceCoords = {
+            '北京市': [116.4074, 39.9042], '天津市': [117.2008, 39.0842], '河北省': [114.5149, 38.0428],
+            '山西省': [112.5489, 37.8570], '内蒙古自治区': [111.7708, 40.8183], '辽宁省': [123.4286, 41.8057],
+            '吉林省': [125.3245, 43.8868], '黑龙江省': [126.6424, 45.7570], '上海市': [121.4737, 31.2304],
+            '江苏省': [118.7969, 32.0603], '浙江省': [120.1536, 30.2875], '安徽省': [117.2272, 31.8206],
+            '福建省': [119.2965, 26.1004], '江西省': [115.8581, 28.6832], '山东省': [117.0208, 36.6682],
+            '河南省': [113.6254, 34.7466], '湖北省': [114.3055, 30.5931], '湖南省': [112.9836, 28.1129],
+            '广东省': [113.2644, 23.1291], '广西壮族自治区': [108.3661, 22.8172], '海南省': [110.3312, 20.0311],
+            '重庆市': [106.5516, 29.5630], '四川省': [104.0665, 30.5723], '贵州省': [106.7073, 26.5982],
+            '云南省': [102.8329, 24.8801], '西藏自治区': [91.1172, 29.6470], '陕西省': [108.9541, 34.2655],
+            '甘肃省': [103.8236, 36.0581], '青海省': [101.7782, 36.6171], '宁夏回族自治区': [106.2586, 38.4681],
+            '新疆维吾尔自治区': [87.6278, 43.7928], '台湾省': [121.5091, 25.0440], '香港特别行政区': [114.1733, 22.3200],
+            '澳门特别行政区': [113.5439, 22.1987]
+        };
+
+        const provinceData = {
+            // 西南地区 - 川湘为主
+            '四川省': [{name:'川菜',value:62},{name:'湘菜',value:8},{name:'粤菜',value:4},{name:'其他',value:26}],
+            '重庆市': [{name:'川菜',value:58},{name:'湘菜',value:10},{name:'粤菜',value:5},{name:'其他',value:27}],
+            '贵州省': [{name:'川菜',value:28},{name:'湘菜',value:15},{name:'粤菜',value:6},{name:'其他',value:51}],
+            '云南省': [{name:'川菜',value:22},{name:'湘菜',value:12},{name:'粤菜',value:8},{name:'其他',value:58}],
+            '西藏自治区': [{name:'川菜',value:35},{name:'湘菜',value:5},{name:'其他',value:60}],
+
+            // 华南地区 - 粤闽为主
+            '广东省': [{name:'粤菜',value:55},{name:'川菜',value:12},{name:'湘菜',value:10},{name:'闽菜',value:5},{name:'其他',value:18}],
+            '福建省': [{name:'闽菜',value:48},{name:'粤菜',value:15},{name:'川菜',value:8},{name:'其他',value:29}],
+            '海南省': [{name:'粤菜',value:32},{name:'川菜',value:15},{name:'湘菜',value:8},{name:'其他',value:45}],
+            '广西壮族自治区': [{name:'粤菜',value:25},{name:'湘菜',value:18},{name:'川菜',value:12},{name:'其他',value:45}],
+            '香港特别行政区': [{name:'粤菜',value:65},{name:'闽菜',value:10},{name:'川菜',value:5},{name:'其他',value:20}],
+            '澳门特别行政区': [{name:'粤菜',value:60},{name:'闽菜',value:12},{name:'其他',value:28}],
+
+            // 华东地区 - 苏浙徽为主
+            '江苏省': [{name:'苏菜',value:42},{name:'川菜',value:12},{name:'粤菜',value:8},{name:'湘菜',value:6},{name:'其他',value:32}],
+            '浙江省': [{name:'浙菜',value:45},{name:'川菜',value:10},{name:'粤菜',value:12},{name:'湘菜',value:5},{name:'其他',value:28}],
+            '上海市': [{name:'苏菜',value:18},{name:'浙菜',value:15},{name:'粤菜',value:15},{name:'川菜',value:12},{name:'其他',value:40}],
+            '安徽省': [{name:'徽菜',value:38},{name:'苏菜',value:12},{name:'川菜',value:10},{name:'湘菜',value:8},{name:'其他',value:32}],
+            '江西省': [{name:'湘菜',value:22},{name:'川菜',value:18},{name:'徽菜',value:10},{name:'其他',value:50}],
+
+            // 华中/华北/东北 - 鲁菜影响
+            '山东省': [{name:'鲁菜',value:52},{name:'川菜',value:10},{name:'湘菜',value:6},{name:'其他',value:32}],
+            '北京市': [{name:'鲁菜',value:25},{name:'川菜',value:18},{name:'粤菜',value:12},{name:'湘菜',value:10},{name:'其他',value:35}],
+            '天津市': [{name:'鲁菜',value:28},{name:'川菜',value:15},{name:'粤菜',value:8},{name:'其他',value:49}],
+            '河北省': [{name:'鲁菜',value:22},{name:'川菜',value:12},{name:'其他',value:66}],
+            '河南省': [{name:'川菜',value:18},{name:'鲁菜',value:15},{name:'湘菜',value:10},{name:'其他',value:57}],
+            '湖南省': [{name:'湘菜',value:58},{name:'川菜',value:15},{name:'粤菜',value:5},{name:'其他',value:22}],
+            '湖北省': [{name:'湘菜',value:25},{name:'川菜',value:20},{name:'粤菜',value:8},{name:'其他',value:47}],
+            '山西省': [{name:'鲁菜',value:15},{name:'川菜',value:12},{name:'其他',value:73}],
+            '辽宁省': [{name:'鲁菜',value:20},{name:'川菜',value:12},{name:'粤菜',value:6},{name:'其他',value:62}],
+            '吉林省': [{name:'鲁菜',value:18},{name:'川菜',value:10},{name:'其他',value:72}],
+            '黑龙江省': [{name:'鲁菜',value:18},{name:'川菜',value:10},{name:'其他',value:72}],
+            '内蒙古自治区': [{name:'鲁菜',value:12},{name:'川菜',value:10},{name:'其他',value:78}],
+
+            // 西北地区
+            '陕西省': [{name:'川菜',value:22},{name:'湘菜',value:8},{name:'粤菜',value:5},{name:'其他',value:65}],
+            '甘肃省': [{name:'川菜',value:18},{name:'湘菜',value:6},{name:'其他',value:76}],
+            '宁夏回族自治区': [{name:'川菜',value:15},{name:'其他',value:85}],
+            '青海省': [{name:'川菜',value:15},{name:'其他',value:85}],
+            '新疆维吾尔自治区': [{name:'川菜',value:12},{name:'湘菜',value:5},{name:'其他',value:83}],
+            '台湾省': [{name:'闽菜',value:25},{name:'粤菜',value:15},{name:'川菜',value:8},{name:'其他',value:52}]
+        };
+
+        // 补全所有缺失省份并计算模拟大小
+        const provinceWeights = {};
+        Object.keys(provinceCoords).forEach(p => {
+            if (!provinceData[p]) {
+                provinceData[p] = [{name: '川菜', value: 10}, {name: '其他', value: 90}];
+            }
+            // 模拟餐饮密度（北京上海广东大气泡，西藏青海小气泡）
+            const large = ['北京市', '上海市', '广东省', '江苏省', '浙江省', '四川省'];
+            const medium = ['山东省', '福建省', '湖南省', '湖北省', '辽宁省', '重庆市', '河南省', '河北省', '陕西省', '安徽省', '福建省'];
+            provinceWeights[p] = large.includes(p) ? 45 : (medium.includes(p) ? 35 : 25);
+        });
+
+        // 2. 混合颜色逻辑
+        function blendColors(data) {
+            const sorted = [...data].sort((a, b) => b.value - a.value).slice(0, 3);
+            const colors = sorted.map(item => colorMap[item.name] || '#E5E7EB');
+            return {
+                type: 'radial', x: 0.5, y: 0.5, r: 0.5,
+                colorStops: colors.map((color, idx) => ({
+                    offset: idx / (colors.length - 1 || 1),
+                    color: color
+                }))
+            };
+        }
+
+        // 3. 初始化图表
+        const marketShareChart = echarts.init(document.getElementById('market-share-chart'));
+        const trendChart = echarts.init(document.getElementById('trend-chart'));
+        const mapChart = echarts.init(document.getElementById('china-map'));
+
+        // 市场占比饼图
+        marketShareChart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
+            series: [{
+                type: 'pie', radius: ['40%', '70%'],
+                itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                label: { show: true, fontSize: 11, color: '#5d4037', formatter: '{b}\n{c}%' },
+                data: Object.entries(colorMap).filter(([k]) => k !== '其他').map(([name, color]) => ({
+                    name, value: [11.4, 9.8, 8.9, 4.7, 4.7, 4.5, 3.2, 2.1][['川菜','粤菜','湘菜','苏菜','浙菜','鲁菜','闽菜','徽菜'].indexOf(name)],
+                    itemStyle: { color }
+                }))
+            }]
+        });
+
+        // 趋势折线图
+        trendChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: {
+                bottom: 0,
+                textStyle: { fontSize: 9, color: '#5d4037' },
+                icon: 'circle',
+                itemWidth: 8,
+                itemGap: 6
+            },
+            grid: { top: '10%', bottom: '25%', left: '10%', right: '5%' },
+            xAxis: { type: 'category', data: ['2020','2021','2022','2023','2024','2025'], axisLine: { lineStyle: { color: '#c4b5a0' } } },
+            yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e2d7c7' } } },
+            series: ['川菜', '粤菜', '湘菜', '苏菜', '浙菜', '鲁菜', '闽菜', '徽菜'].map(name => ({
+                name, type: 'line', smooth: true,
+                lineStyle: { width: 2.5, color: colorMap[name] },
+                itemStyle: { color: colorMap[name] },
+                symbol: 'none',
+                data: name === '川菜' ? [9.5, 10.2, 10.8, 11.0, 11.2, 11.4] :
+                      name === '粤菜' ? [10.5, 10.3, 10.1, 9.9, 9.8, 9.8] :
+                      name === '湘菜' ? [7.8, 8.2, 8.5, 8.7, 8.8, 8.9] :
+                      name === '苏菜' ? [5.1, 5.0, 4.8, 4.7, 4.7, 4.7] :
+                      name === '浙菜' ? [4.8, 4.8, 4.7, 4.7, 4.7, 4.7] :
+                      name === '鲁菜' ? [5.0, 4.9, 4.7, 4.6, 4.5, 4.5] :
+                      name === '闽菜' ? [3.5, 3.4, 3.3, 3.2, 3.2, 3.2] : [2.5, 2.4, 2.3, 2.2, 2.1, 2.1]
+            }))
+        });
+
+        // 地图初始化
+        fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+            .then(res => res.json())
+            .then(geoJson => {
+                echarts.registerMap('china', geoJson);
+
+                const scatterData = Object.keys(provinceData).map(p => ({
+                    name: p,
+                    value: [...provinceCoords[p], 100],
+                    details: provinceData[p],
+                    symbolSize: provinceWeights[p] || 30, // 使用模拟密度决定气泡大小
+                    itemStyle: {
+                        color: blendColors(provinceData[p]),
+                        borderColor: '#fff', borderWidth: 1.5, shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.25)'
+                    }
+                }));
+
+                mapChart.setOption({
+                    geo: {
+                        map: 'china', roam: false, zoom: 1.6, center: [105, 36],
+                        itemStyle: { areaColor: '#fdfbf7', borderColor: '#d4c4b0', borderWidth: 1 },
+                        emphasis: {
+                            itemStyle: { areaColor: '#f5eadb' },
+                            label: { color: '#5d4037', show: true, fontFamily: 'Noto Serif SC, SimSun, 宋体, serif' }
+                        }
+                    },
+                    series: [{
+                        type: 'scatter', coordinateSystem: 'geo',
+                        data: scatterData,
+                        tooltip: {
+                            trigger: 'item',
+                            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                            borderColor: '#d4c4b0',
+                            borderWidth: 1,
+                            padding: 12,
+                            textStyle: {
+                                color: '#3e2723',
+                                fontFamily: 'Noto Serif SC, SimSun, 宋体, serif'
+                            },
+                            formatter: (params) => {
+                                let res = `<div style="font-weight:bold;font-size:16px;margin-bottom:8px;border-bottom:2px solid #d4c4b0;padding-bottom:4px;color:#5d4037">${params.name}</div>`;
+                                // 按占比从高到低排序显示
+                                const sortedDetails = [...params.data.details].sort((a, b) => b.value - a.value);
+                                sortedDetails.forEach(d => {
+                                    const dotColor = colorMap[d.name] || '#F3F4F6';
+                                    res += `<div style="display:flex;justify-content:space-between;align-items:center;gap:30px;margin:4px 0;font-size:13px">
+                                        <div style="display:flex;align-items:center;gap:8px">
+                                            <span style="width:10px;height:10px;border-radius:50%;background:${dotColor};border:1px solid rgba(0,0,0,0.05)"></span>
+                                            <span style="color:#6d4c41">${d.name}</span>
+                                        </div>
+                                        <b style="color:#5d4037">${d.value}%</b>
+                                    </div>`;
+                                });
+                                return res;
+                            }
+                        },
+                        emphasis: { scale: 1.15, itemStyle: { shadowBlur: 15 } }
+                    }]
+                });
+            });
+
+        window.addEventListener('resize', () => {
+            marketShareChart.resize();
+            trendChart.resize();
+            mapChart.resize();
+        });
+    </script>
+</body>
+</html>

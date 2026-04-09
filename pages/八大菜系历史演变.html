@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华夏百味图 | 历代菜系演变</title>
+    <script src="../libs/tailwind/tailwind.js"></script>
+    <script src="../libs/echarts/echarts.min.js"></script>
+    <script src="../libs/gsap/gsap.min.js"></script>
+    <link href="../libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+
+        :root {
+            --paper: #F2EFE6;
+            --ink: #2C2C2C;
+            --red: #8C4B4B;
+            --gold: #A6937C;
+        }
+
+        * { box-sizing: border-box; }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--paper);
+            font-family: 'Noto Serif SC', serif;
+            overflow: hidden; color: var(--ink);
+        }
+
+        .paper-overlay {
+            position: fixed; inset: 0;
+            background-image: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+            opacity: 0.5; pointer-events: none; z-index: 5;
+        }
+
+        .ink-mist {
+            position: fixed; inset: -50%;
+            background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.02) 0%, transparent 60%);
+            filter: blur(80px);
+            animation: drift 30s infinite alternate ease-in-out;
+            z-index: 1; pointer-events: none;
+        }
+
+        @keyframes drift {
+            from { transform: translate(-5%, -5%) rotate(0deg); }
+            to { transform: translate(5%, 5%) rotate(5deg); }
+        }
+
+        .page-border {
+            position: fixed; inset: 25px;
+            border: 1px solid rgba(44, 44, 44, 0.08);
+            pointer-events: none; z-index: 6;
+        }
+
+        /* 顶部标题 */
+        .sidebar-header {
+            position: absolute; top: 50px; left: 60px; z-index: 20;
+            display: flex; flex-direction: column; gap: 15px;
+            max-width: 400px;
+        }
+
+        .site-title {
+            font-size: 3.5rem; font-weight: 900;
+            letter-spacing: 0.1em; margin: 0; line-height: 1;
+            border-bottom: 2px solid var(--red); padding-bottom: 10px;
+        }
+
+        .dynasty-badge {
+            font-size: 1.8rem; color: var(--red);
+            font-weight: 700; letter-spacing: 0.1em;
+        }
+
+        .dynasty-memo {
+            font-size: 1.1rem; color: var(--gold);
+            line-height: 1.5; letter-spacing: 1px; opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        /* 历史事件列表 - 纯文字样式 */
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border-top: 1px solid rgba(140, 75, 75, 0.1);
+            padding-top: 15px;
+        }
+
+        .event-item {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--ink);
+            opacity: 0.8;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .event-item::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--red);
+            font-weight: bold;
+        }
+
+        /* ============ 右侧详情 - 纯文字浮现 ============ */
+        .scroll-panel {
+            position: fixed; right: -550px; top: 0; bottom: 0;
+            width: 500px; z-index: 100;
+            background: transparent;
+            padding: 80px 50px; overflow-y: auto;
+            transition: right 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: right;
+        }
+
+        .scroll-panel.show { right: 0; }
+
+        .btn-close {
+            position: absolute; top: 30px; right: 50px;
+            cursor: pointer; color: var(--gold);
+            font-size: 1.2rem; font-weight: 700;
+            transition: all 0.2s ease-out;
+            opacity: 0.6;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .seal-title {
+            display: block;
+            color: var(--red);
+            font-size: 4rem; font-weight: 900;
+            margin-bottom: 20px;
+            letter-spacing: 0.2em;
+        }
+
+        .cuisine-meta {
+            font-size: 1.2rem; color: var(--gold);
+            margin-bottom: 40px; font-weight: 500;
+        }
+
+        .cuisine-body {
+            font-size: 1.15rem; line-height: 2.2;
+            text-align: justify; letter-spacing: 1px;
+            color: var(--ink);
+            direction: ltr;
+        }
+
+        .cuisine-tags {
+            margin-top: 40px;
+            display: flex; flex-wrap: wrap; gap: 15px;
+            justify-content: flex-end;
+        }
+
+        .cuisine-tag {
+            padding: 5px 0;
+            color: var(--red);
+            font-size: 1rem;
+            letter-spacing: 2px;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(140, 75, 75, 0.2);
+        }
+
+        .cuisine-tag:hover {
+            background: rgba(166, 147, 124, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        #map-root {
+            width: 100vw;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            z-index: 10;
+            filter: url('#ink-bleed');
+        }
+
+        /* 底部控制条 */
+        .timeline-container {
+            position: fixed; bottom: 60px; left: 50%;
+            transform: translateX(-50%); width: 90%; max-width: 750px;
+            z-index: 100; text-align: center;
+        }
+
+        .timeline-slider {
+            -webkit-appearance: none; width: 100%; height: 1px;
+            background: #CCC; outline: none; margin: 35px 0;
+        }
+
+        .timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 35px; height: 35px;
+            background: var(--red); border: 4px solid #fff;
+            border-radius: 50%; cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease-out;
+        }
+
+        .timeline-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .dynasty-labels {
+            display: flex; justify-content: space-between;
+            color: #999; font-size: 14px;
+        }
+
+        .d-node {
+            cursor: pointer; transition: all 0.3s ease-out;
+            padding: 5px 10px; border-radius: 6px;
+        }
+
+        .d-node:hover {
+            color: var(--red);
+            background: rgba(140, 75, 75, 0.1);
+        }
+
+        .d-node.active {
+            color: var(--red); font-weight: 900;
+            transform: scale(1.3);
+            background: rgba(140, 75, 75, 0.15);
+        }
+
+        /* 可访问性 */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .timeline-panel { display: none; }
+            .sidebar-header { left: 30px; top: 30px; }
+            .site-title { font-size: 2.5rem; }
+        }
+    
+        /* 返回按钮 - 小箭头样式 */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: #c8302e;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+        <!-- 返回按钮 -->
+    <a href="../catalog.html" class="back-button" title="返回目录">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+<svg style="position: absolute; width: 0; height: 0;">
+        <filter id="ink-bleed">
+            <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+    </svg>
+
+    <div class="paper-overlay"></div>
+    <div class="ink-mist"></div>
+    <div class="page-border"></div>
+
+    <header class="sidebar-header">
+        <h1 class="site-title">华夏百味图</h1>
+        <div id="active-dynasty" class="dynasty-badge">先秦之味</div>
+        <div id="dynasty-memo" class="dynasty-memo">齐鲁之宗 · 饮食之源</div>
+        <!-- 历史纪年直接显示在这里，不使用卡片 -->
+        <div id="dynasty-events" class="events-list"></div>
+    </header>
+
+    <div id="map-root"></div>
+
+    <aside id="info-panel" class="scroll-panel">
+        <div class="btn-close" onclick="hideInfo()">✕ 闭</div>
+        <div id="p-seal" class="seal-title">鲁菜</div>
+        <p id="p-meta" class="cuisine-meta">起源:山东 · 中华饮食瑰宝</p>
+        <div id="p-body" class="cuisine-body"></div>
+        <div id="p-tags" class="cuisine-tags"></div>
+    </aside>
+
+    <div class="timeline-container">
+        <input type="range" id="dynasty-range" min="0" max="6" value="0" step="1" class="timeline-slider">
+        <div class="dynasty-labels">
+            <span class="d-node active" onclick="jumpTo(0)">先秦</span>
+            <span class="d-node" onclick="jumpTo(1)">秦汉</span>
+            <span class="d-node" onclick="jumpTo(2)">唐代</span>
+            <span class="d-node" onclick="jumpTo(3)">宋代</span>
+            <span class="d-node" onclick="jumpTo(4)">元明</span>
+            <span class="d-node" onclick="jumpTo(5)">清代</span>
+            <span class="d-node" onclick="jumpTo(6)">民国</span>
+        </div>
+    </div>
+
+    <script>
+        const timelineData = [
+            {
+                name: "先秦之味", label: "先秦",
+                actives: ["鲁菜"],
+                memo: "齐鲁文化引领中原饮食之风。",
+                events: ["周代八珍奠定礼制饮食", "《诗经》记载烹饪技法", "齐鲁地区烹饪体系初成"]
+            },
+            {
+                name: "秦汉合流", label: "秦汉",
+                actives: ["鲁菜", "川菜", "粤菜"],
+                memo: "大一统下,南北饮食开始交汇。",
+                events: ["丝绸之路带来胡椒等香料", "川蜀烹饪技艺首次见诸文献", "岭南地区开始使用发酵技术"]
+            },
+            {
+                name: "隋唐盛世", label: "唐代",
+                actives: ["鲁菜", "川菜", "粤菜", "苏菜", "闽菜", "浙菜"],
+                memo: "万邦来朝,饮食文化极尽繁华。",
+                events: ["长安城汇聚天下美食", "江南烹饪技艺大放异彩", "闽粤海鲜烹饪体系成型"]
+            },
+            {
+                name: "两宋演变", label: "宋代",
+                actives: ["鲁菜", "川菜", "粤菜", "苏菜", "闽菜", "浙菜", "徽菜"],
+                memo: "南宋迁都临安,汴京厨师南下。",
+                events: ["《东京梦华录》详述开封饮食", "临安成为美食文化新中心", "徽商崛起带动徽菜发展"]
+            },
+            {
+                name: "元明扩张", label: "元明",
+                actives: ["鲁菜", "川菜", "粤菜", "苏菜", "闽菜", "浙菜", "徽菜", "湘菜"],
+                memo: "由于人口大迁徙,川湘特色成军。",
+                events: ["辣椒经海上丝路传入中国", "湘菜开始以辣闻名", "明代《本草纲目》记载食材千种"]
+            },
+            {
+                name: "大清鼎盛", label: "清代",
+                actives: ["鲁菜", "川菜", "粤菜", "苏菜", "闽菜", "浙菜", "湘菜", "徽菜"],
+                memo: "四大菜系确立,八大流派分化。",
+                events: ["满汉全席成为巅峰盛宴", "鲁菜入宫成为官府菜之首", "八大菜系格局正式形成"]
+            },
+            {
+                name: "盛世传承", label: "民国",
+                actives: ["鲁菜", "川菜", "粤菜", "苏菜", "闽菜", "浙菜", "湘菜", "徽菜"],
+                memo: "中华美食走向世界,文脉相传。",
+                events: ["中餐馆遍布世界各地", "烹饪技艺开始系统化传承", "八大菜系名扬海外"]
+            }
+        ];
+
+        const cuisineInfo = {
+            "鲁菜": { origin: "山东", content: "鲁菜是八大菜系之首,历史最悠久,技法最全面。源于齐鲁,深受儒家文化影响。明清时期进入皇宫,成为御膳核心。讲究咸鲜纯正,极其注重调汤与火候。", tags: ["九转大肠", "葱烧海参", "糖醋鲤鱼"], color: "#7D5A5A", pos: [117.1, 36.6] },
+            "川菜": { origin: "四川", content: "古蜀国时期已具雏形。清代辣椒传入后发生质变,形成了'一菜一格,百菜百味'。以麻辣、酸辣、椒麻等味型著称,富有极其强烈的江湖气息。", tags: ["麻婆豆腐", "鱼香肉丝", "回锅肉"], color: "#8A6B6B", pos: [104.0, 30.6] },
+            "粤菜": { origin: "广东", content: "由广州、潮州、东江三地风味组成。擅长处理生鲜食材,追求'鲜、嫩、滑、爽'。受西方烹饪影响较早,中西合璧,讲究原汁原味,清而不淡。", tags: ["白切鸡", "虾饺", "肠粉"], color: "#6B756B", pos: [113.3, 23.1] },
+            "苏菜": { origin: "江苏", content: "江苏自古为名厨荟萃之地。苏菜以炖、焖、煨、煮见长,刀工极其精细。口味清淡微甜,造型优雅,文化内涵极其深厚,被誉为'东南第一佳味'。", tags: ["松鼠桂鱼", "蟹粉狮子头"], color: "#5E656B", pos: [118.8, 32.1] },
+            "闽菜": { origin: "福建", content: "依山傍海的地理环境造就了闽菜独特的制汤和红糟技艺。讲究火候,注重'鲜甜'。佛跳墙是其顶级代表,体现了对名贵食材处理的极致追求。", tags: ["佛跳墙", "荔枝肉"], color: "#8A7D6B", pos: [119.3, 26.1] },
+            "浙菜": { origin: "浙江", content: "南宋定都临安后迎来巅峰。浙菜选料讲究,烹调技法精细,口味清新爽脆。善用糟、酱调味,菜品极具西湖苏堤般的诗情画意。", tags: ["西湖醋鱼", "龙井虾仁"], color: "#6B7575", pos: [120.2, 30.3] },
+            "湘菜": { origin: "湖南", content: "湘菜历史悠久,汉墓出土文物已见雏形。重油色、浓香辣。擅长腊制与煨炖,口味酸辣软嫩。具有极强的地域性格,火辣而不失细腻。", tags: ["剁椒鱼头", "小炒肉"], color: "#7D6B5A", pos: [112.98, 28.23] },
+            "徽菜": { origin: "安徽", content: "徽商崛起带动了徽菜的辉煌。徽菜擅长烹饪山珍野味,注重火功,重油、重色、重火功. 讲究以火腿佐味,冰糖提鲜,菜肴具有淳厚的泥土芬芳。", tags: ["臭鳜鱼", "一品锅"], color: "#65655A", pos: [117.3, 31.9] }
+        };
+
+        const chart = echarts.init(document.getElementById('map-root'));
+        let currentStep = 0;
+
+        // 初始化
+        async function init() {
+            try {
+                const res = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+                const geoJson = await res.json();
+                echarts.registerMap('china', geoJson);
+                update(0);
+            } catch (e) {
+                const res = await fetch('https://raw.githubusercontent.com/apache/echarts/master/test/data/map/json/china.json');
+                const geoJson = await res.json();
+                echarts.registerMap('china', geoJson);
+                update(0);
+            }
+        }
+
+        // 更新内容与地图
+        function update(step) {
+            currentStep = step;
+            const data = timelineData[step];
+
+            // 更新标题与朝代说明
+            document.getElementById('active-dynasty').innerText = data.name;
+            document.getElementById('dynasty-memo').innerText = data.memo;
+
+            // 核心修改：将对应朝代的历史事件直接渲染到标题下的容器中
+            const eventsContainer = document.getElementById('dynasty-events');
+            if (eventsContainer) {
+                eventsContainer.innerHTML = data.events
+                    .map(e => `<div class="event-item">${e}</div>`)
+                    .join('');
+            }
+
+            document.querySelectorAll('.d-node').forEach((el, i) =>
+                el.classList.toggle('active', i === step)
+            );
+
+            const points = Object.keys(cuisineInfo).map(name => {
+                const info = cuisineInfo[name];
+                const active = data.actives.includes(name);
+                return {
+                    name: name,
+                    value: [...info.pos, active ? 1 : 0],
+                    itemStyle: { color: info.color, opacity: active ? 0.8 : 0 }
+                };
+            });
+
+            chart.setOption({
+                backgroundColor: 'transparent',
+                geo: {
+                    map: 'china',
+                    roam: false, // 禁止缩放和拖拽
+                    layoutCenter: ['50%', '60%'], // 地图垂直位置向下偏移
+                    layoutSize: '110%', // 固定地图占据容器的大小比例
+                    itemStyle: {
+                        areaColor: 'rgba(44, 44, 44, 0.02)',
+                        borderColor: 'rgba(44, 44, 44, 0.1)',
+                        borderWidth: 1
+                    },
+                    emphasis: { itemStyle: { areaColor: 'rgba(44, 44, 44, 0.05)' } }
+                },
+                series: [{
+                    type: 'effectScatter',
+                    coordinateSystem: 'geo',
+                    data: points,
+                    symbolSize: val => val[2] ? 22 : 0,
+                    showEffectOn: 'render',
+                    rippleEffect: { brushType: 'fill', scale: 3.5, period: 4 },
+                    itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.1)' },
+                    label: {
+                        show: true, position: 'right', formatter: '{b}',
+                        color: '#666', fontWeight: 'bold', fontSize: 15,
+                        fontFamily: 'Noto Serif SC'
+                    }
+                }]
+            });
+        }
+
+        // 显示详情
+        function showInfo(name) {
+            const info = cuisineInfo[name];
+            const panel = document.getElementById('info-panel');
+
+            document.getElementById('p-seal').innerText = name;
+            document.getElementById('p-meta').innerText = `起源:${info.origin} · 中华饮食瑰宝`;
+            document.getElementById('p-body').innerText = info.content;
+            document.getElementById('p-tags').innerHTML = info.tags
+                .map(t => `<span class="cuisine-tag">${t}</span>`)
+                .join('');
+
+            panel.classList.add('show');
+        }
+
+        function hideInfo() {
+            document.getElementById('info-panel').classList.remove('show');
+        }
+
+        function jumpTo(idx) {
+            document.getElementById('dynasty-range').value = idx;
+            update(idx);
+        }
+
+        // 启动
+        init();
+
+        chart.on('click', (p) => {
+            if (p.data && p.data.value[2]) showInfo(p.name);
+        });
+
+        document.getElementById('dynasty-range').addEventListener('input', (e) =>
+            update(parseInt(e.target.value))
+        );
+
+        window.addEventListener('resize', () => chart.resize());
+    </script>
+</body>
+</html>

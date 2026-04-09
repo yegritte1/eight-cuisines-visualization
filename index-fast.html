@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百味荟萃 | 八大菜系数据可视化</title>
+
+    <!-- 使用本地库文件 -->
+    <link rel="stylesheet" href="./libs/fullpage/fullpage.min.css">
+    <script src="./libs/fullpage/fullpage.min.js"></script>
+
+    <style>
+        :root {
+            --paper: #f5f0e8;
+            --ink: #2d1f1a;
+            --red: #c8302e;
+            --gold: #b8860b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background-color: var(--paper);
+            color: var(--ink);
+            overflow: hidden;
+        }
+
+        #fullpage {
+            position: relative;
+        }
+
+        .section {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .section iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 导航样式 */
+        #fp-nav ul li a span {
+            background: var(--red) !important;
+        }
+
+        #fp-nav ul li .fp-tooltip {
+            color: var(--ink) !important;
+        }
+
+        /* 页面加载提示 */
+        .page-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--paper);
+            color: var(--gold);
+            font-size: 1.2rem;
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+
+        .page-loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 顶部提示条 */
+        .top-hint {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(140, 75, 75, 0.95);
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            z-index: 9999;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .close-hint {
+            float: right;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 0 10px;
+        }
+
+        /* 返回封面按钮 */
+        .back-home {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 9998;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(200, 48, 46, 0.3);
+            border-radius: 12px;
+            padding: 10px 20px;
+            color: var(--red);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .back-home:hover {
+            transform: translateX(-4px);
+            border-color: var(--red);
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 4px 12px rgba(200, 48, 46, 0.2);
+        }
+
+        .back-home svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 返回封面按钮 -->
+    <a href="menu.html" class="back-home">
+        <svg viewBox="0 0 24 24">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        返回封面
+    </a>
+
+    <!-- 顶部提示 -->
+    <div class="top-hint" id="topHint">
+        <span class="close-hint" onclick="document.getElementById('topHint').remove()">✕</span>
+        💡 提示：滚动鼠标或按键盘↑↓切换页面，按 H 键查看快捷键
+    </div>
+
+    <!-- fullPage容器 -->
+    <div id="fullpage">
+        <!-- 第1屏：烹饪方法 -->
+        <div class="section" data-anchor="pengren">
+            <div class="page-loading">正在加载烹饪方法桑基图...</div>
+            <iframe data-src="./pages/pengren.html"></iframe>
+        </div>
+
+        <!-- 第2屏：菜系溯源 -->
+        <div class="section" data-anchor="suyuan">
+            <div class="page-loading">正在加载菜系溯源图谱...</div>
+            <iframe data-src="./pages/八大菜系溯源图谱.html"></iframe>
+        </div>
+
+        <!-- 第3屏：历史演变 -->
+        <div class="section" data-anchor="lishi">
+            <div class="page-loading">正在加载历史演变时间线...</div>
+            <iframe data-src="./pages/八大菜系历史演变.html"></iframe>
+        </div>
+
+        <!-- 第4屏：气泡图 -->
+        <div class="section" data-anchor="qipao">
+            <div class="page-loading">正在加载菜品气泡图...</div>
+            <iframe data-src="./pages/八大菜系气泡图.html"></iframe>
+        </div>
+
+        <!-- 第5屏：地域分布 -->
+        <div class="section" data-anchor="ditu">
+            <div class="page-loading">正在加载地域分布图...</div>
+            <iframe data-src="./pages/各省菜系占比可视化.html"></iframe>
+        </div>
+
+        <!-- 第6屏：口味图谱 -->
+        <div class="section" data-anchor="kouwei">
+            <div class="page-loading">正在加载口味经纬度图...</div>
+            <iframe data-src="./pages/口味经纬度图.html"></iframe>
+        </div>
+
+        <!-- 第7屏：转盘 -->
+        <div class="section" data-anchor="zhuanpan">
+            <div class="page-loading">正在加载互动转盘...</div>
+            <iframe data-src="./pages/八大菜系转盘.html"></iframe>
+        </div>
+
+        <!-- 第8屏：菜品详情 -->
+        <div class="section" data-anchor="caipin">
+            <div class="page-loading">正在加载代表菜品...</div>
+            <iframe data-src="./pages/菜品.html"></iframe>
+        </div>
+
+        <!-- 第9屏：互动测试 -->
+        <div class="section" data-anchor="test">
+            <div class="page-loading">正在加载互动测试...</div>
+            <iframe data-src="./pages/双测试页面.html"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // 懒加载iframe
+        function loadIframe(section) {
+            const iframe = section.querySelector('iframe');
+            const loading = section.querySelector('.page-loading');
+
+            if (iframe && iframe.getAttribute('data-src')) {
+                const src = iframe.getAttribute('data-src');
+                iframe.src = src;
+                iframe.removeAttribute('data-src');
+
+                // 3秒后隐藏加载提示
+                setTimeout(() => {
+                    if (loading) loading.classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        // 初始化fullPage
+        new fullpage('#fullpage', {
+            navigation: true,
+            navigationPosition: 'right',
+            navigationTooltips: ['烹饪方法', '菜系溯源', '历史演变', '菜品气泡', '地域分布', '口味图谱', '今晚吃什么', '代表菜品', '互动测试'],
+            showActiveTooltip: true,
+            scrollingSpeed: 700,
+            autoScrolling: true,
+            fitToSection: true,
+            scrollBar: false,
+            keyboardScrolling: true,
+            touchSensitivity: 15,
+
+            afterLoad: function(origin, destination) {
+                // 加载当前页和下一页
+                loadIframe(destination.item);
+                if (destination.index < 7) {
+                    const nextSection = document.querySelectorAll('.section')[destination.index + 1];
+                    if (nextSection) loadIframe(nextSection);
+                }
+            }
+        });
+
+        // 首次加载第一屏
+        window.addEventListener('load', () => {
+            const firstSection = document.querySelector('.section');
+            loadIframe(firstSection);
+
+            // 5秒后自动隐藏顶部提示
+            setTimeout(() => {
+                const hint = document.getElementById('topHint');
+                if (hint) hint.remove();
+            }, 5000);
+        });
+
+        // 快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'h' || e.key === 'H') {
+                alert('键盘操作:\n↑↓ 或 滚轮 - 切换页面\nHome - 返回首页\nEnd - 跳转末页\nH - 显示此帮助');
+            }
+        });
+    </script>
+</body>
+</html>

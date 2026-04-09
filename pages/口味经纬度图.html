@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中华烹饪味觉图志 - 交互视界 (雅致宣纸版)</title>
+    <script src="../libs/tailwind/tailwind.js"></script>
+    <script src="../libs/echarts/echarts.min.js"></script>
+    <link href="../libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-paper: #f0e8d6;  /* 用户指定色号 */
+            --ink: #2d2d2d;      /* 墨色 */
+            --cinnabar: #9e2a2b; /* 朱砂红 */
+            --gold: #c8a063;     /* 雅金色 */
+            --silk-dark: #d4a373;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
+            background-color: var(--bg-paper); font-family: 'Noto Serif SC', serif; color: var(--ink);
+        }
+
+        /* 宣纸纹理 */
+        body::before {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://www.transparenttextures.com/patterns/handmade-paper.png');
+            opacity: 0.2; pointer-events: none; z-index: 50;
+        }
+
+        .full-screen-layout { height: 100vh; display: flex; flex-direction: column; }
+
+        .divider-h { width: 100%; height: 1px; background: linear-gradient(to right, transparent, rgba(45, 45, 45, 0.08), transparent); }
+        .divider-v { width: 1px; height: 100%; background: linear-gradient(to bottom, transparent, rgba(45, 45, 45, 0.08), transparent); }
+
+        /* 地图显示区域 */
+        .map-section {
+            width: 70%; height: 100%; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .map-container {
+            position: relative; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .map-image {
+            width: 100%; height: 100%; object-fit: contain;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.15));
+            opacity: 0.95;
+        }
+
+        /* 呼吸灯标记点 */
+        .hotspot-trigger {
+            position: absolute; width: 18px; height: 18px; transform: translate(-50%, -50%);
+            cursor: pointer; z-index: 200;
+        }
+        .hotspot-dot {
+            position: absolute; top: 50%; left: 50%; width: 7px; height: 7px;
+            background-color: var(--cinnabar); border-radius: 50%;
+            transform: translate(-50%, -50%); border: 1.5px solid #fff;
+            box-shadow: 0 0 12px rgba(158, 42, 43, 0.4);
+            transition: all 0.3s ease;
+        }
+        .hotspot-trigger:hover .hotspot-dot { transform: translate(-50%, -50%) scale(1.4); background-color: #fff; border-color: var(--cinnabar); }
+
+        .hotspot-ring {
+            position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+            border: 2px solid var(--cinnabar); border-radius: 50%;
+            transform: translate(-50%, -50%); animation: pulse 3s infinite; opacity: 0;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+        }
+
+        .mini-tip {
+            position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px);
+            background: rgba(45, 45, 45, 0.9); color: #fff; padding: 4px 12px; border-radius: 2px;
+            font-size: 11px; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: 700;
+        }
+        .hotspot-trigger:hover .mini-tip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+        /* 右侧文字面板 */
+        .info-panel {
+            width: 30%; height: 100%; display: flex; flex-direction: column;
+            justify-content: center; padding: 60px 40px;
+            position: relative; background: rgba(255,255,255,0.1);
+        }
+
+        .info-content {
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .info-content.active { opacity: 1; transform: translateY(0); }
+
+        .info-title { font-size: 42px; font-weight: 900; color: var(--cinnabar); margin-bottom: 15px; letter-spacing: 4px; }
+        .info-subtitle { font-size: 18px; font-weight: 300; color: var(--silk-dark); margin-bottom: 30px; letter-spacing: 6px; border-bottom: 1px solid rgba(200, 160, 99, 0.3); padding-bottom: 10px; display: inline-block; }
+        .info-desc { font-size: 15px; line-height: 2; color: #555; text-align: justify; white-space: pre-wrap; }
+
+        /* 雅致标题区 */
+        .page-header { position: absolute; top: 30px; left: 50px; z-index: 100; }
+        .page-title { font-size: 36px; font-weight: 900; letter-spacing: 10px; color: var(--ink); text-shadow: 1px 1px 2px rgba(0,0,0,0.05); }
+        .page-subtitle { font-size: 13px; font-weight: 300; letter-spacing: 14px; color: #888; text-transform: uppercase; margin-top: 8px; }
+
+        /* 图例样式 */
+        .legend-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            padding: 0 40px 15px 40px;
+            z-index: 100;
+            position: relative;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+            color: #666;
+            padding: 2px 0;
+        }
+        .legend-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .legend-item b {
+            color: var(--cinnabar);
+            margin-right: 4px;
+        }
+
+    
+        /* 返回按钮 - 小箭头样式 */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: #c8302e;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+        <!-- 返回按钮 -->
+    <a href="../catalog.html" class="back-button" title="返回目录">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+<div class="page-header">
+        <div class="page-title">中华烹饪·味觉经纬</div>
+        <div class="page-subtitle">Culinary Logic of Chinese Heritage</div>
+    </div>
+
+    <div class="full-screen-layout">
+
+        <!-- 上 1/2：多维气泡图 (口味差异) -->
+        <div class="h-1/2 w-full pt-24 px-16 pb-2 flex flex-col">
+            <div id="top-chart" class="flex-grow"></div>
+            <!-- 口味与菜系图例标注 -->
+            <div class="legend-container">
+                <div class="legend-item"><span class="legend-color" style="background: #8b5d5d;"></span><b>鲁/湘：</b>咸鲜脆嫩 / 香辣奔放</div>
+                <div class="legend-item"><span class="legend-color" style="background: #a67c7c;"></span><b>川菜：</b>麻辣激越，百变味型</div>
+                <div class="legend-item"><span class="legend-color" style="background: #7b8d7b;"></span><b>苏菜：</b>咸甜适宜，清淡醇美</div>
+                <div class="legend-item"><span class="legend-color" style="background: #a69685;"></span><b>浙菜：</b>细致委婉，鲜嫩软糯</div>
+                <div class="legend-item"><span class="legend-color" style="background: #708a99;"></span><b>粤菜：</b>原汁原味，极简至味</div>
+                <div class="legend-item"><span class="legend-color" style="background: #b89b8e;"></span><b>闽菜：</b>煨炖醇香，山海交融</div>
+                <div class="legend-item"><span class="legend-color" style="background: #7d7585;"></span><b>徽菜：</b>重油重色，山珍重味</div>
+            </div>
+        </div>
+
+        <div class="divider-h"></div>
+
+        <!-- 下 1/2：交互联动区 -->
+        <div class="h-1/2 w-full flex">
+
+            <!-- 下左：插画地图 (70%) -->
+            <div class="map-section">
+                <div class="map-container">
+                    <img src="images/image(1).png" alt="地图" class="map-image">
+
+                    <!-- 21个交互点 - 保持精准对位 -->
+                    <div class="hotspot-trigger" style="left: 15%; top: 35%;" onmouseover="updateInfo('高原物候')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 10%; top: 22%;" onmouseover="updateInfo('高山雪水')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 5%; top: 58%;" onmouseover="updateInfo('山野菌香')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 8%; top: 76%;" onmouseover="updateInfo('川西老味')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 18%; top: 65%;" onmouseover="updateInfo('锦绣巴蜀')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 31%; top: 61%;" onmouseover="updateInfo('湖广湿热')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 42%; top: 44%;" onmouseover="updateInfo('中原气象')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 53%; top: 43%;" onmouseover="updateInfo('江淮余韵')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 51%; top: 56%;" onmouseover="updateInfo('黄山云雾')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 58%; top: 55%;" onmouseover="updateInfo('江南水脉')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 65%; top: 55%;" onmouseover="updateInfo('吴越风华')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 64%; top: 39%;" onmouseover="updateInfo('淮扬清鲜')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 70%; top: 72%;" onmouseover="updateInfo('南岭光照')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 75%; top: 54%;" onmouseover="updateInfo('东海季风')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 88%; top: 65%;" onmouseover="updateInfo('滨海高湿')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 45%; top: 76%;" onmouseover="updateInfo('三湘香辣')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 28%; top: 82%;" onmouseover="updateInfo('云贵秘境')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 56%; top: 80%;" onmouseover="updateInfo('岭南丰鲜')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 65%; top: 86%;" onmouseover="updateInfo('南海渔火')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 77%; top: 78%;" onmouseover="updateInfo('八闽山海')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                    <div class="hotspot-trigger" style="left: 92%; top: 76%;" onmouseover="updateInfo('绝味辛香')"><div class="hotspot-ring"></div><div class="hotspot-dot"></div></div>
+                </div>
+            </div>
+
+            <div class="divider-v"></div>
+
+            <!-- 下右：纯文字介绍面板 (30%) -->
+            <div class="info-panel">
+                <div id="info-container" class="info-content active">
+                    <div id="info-title" class="info-title">齐鲁大地</div>
+                    <div id="info-subtitle" class="info-subtitle">鲁菜之源 · 咸鲜基底</div>
+                    <div id="info-desc" class="info-desc">这里是中华烹饪的根基。以咸鲜、脆嫩著称，讲究旺火急炒，保留食材原本的精粹。每一滴酱油、每一颗大葱，都是对黄土地最深沉的回响。</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 口味差异多维图 (ECharts 浅色主题) ---
+        (function() {
+            var chartDom = document.getElementById('top-chart');
+            var myChart = echarts.init(chartDom);
+            const xLabels = ['咸鲜', '葱香', '酱香', '鲜醇', '酸甜', '红糖香', '甜咸', '清淡', '糟香', '重油', '辣鲜', '酱香', '麻辣', '酸辣', '红油香', '甜咸', '酒香', '时鲜', '清鲜', '甜润', '淡香', '酸辣', '甜香', '重咸'];
+            const yLabels = ['其他', '宗教', '传统', '交流', '历史', '物产', '气候', '地理'];
+
+            const ancientPalette = ['#8b5d5d', '#7b8d7b', '#a69685', '#7d7585', '#708a99', '#b89b8e', '#a67c7c', '#84a59d'];
+            const cuisineGroups = [
+                { name: '鲁菜', color: ancientPalette[0], xStart: 0 }, { name: '闽菜', color: ancientPalette[5], xStart: 3 }, { name: '苏菜', color: ancientPalette[1], xStart: 6 }, { name: '徽菜', color: ancientPalette[3], xStart: 9 },
+                { name: '川菜', color: ancientPalette[6], xStart: 12 }, { name: '浙菜', color: ancientPalette[2], xStart: 15 }, { name: '粤菜', color: ancientPalette[4], xStart: 18 }, { name: '湘菜', color: ancientPalette[0], xStart: 21 }
+            ];
+            const data = [[0,0,8], [0,1,3], [0,2,5], [0,3,1], [0,4,8], [0,5,8], [0,6,3], [0,7,8], [1,0,8], [1,1,2], [1,2,5], [1,3,0], [1,4,5], [1,5,8], [1,6,2], [1,7,8], [2,0,8], [2,1,0], [2,2,5], [2,3,0], [2,4,8], [2,5,8], [2,6,2], [2,7,5], [3,0,5], [3,1,0], [3,2,3], [3,3,5], [3,4,3], [3,5,8], [3,6,3], [3,7,5], [4,0,5], [4,1,0], [4,2,2], [4,3,8], [4,4,2], [4,5,5], [4,6,3], [4,7,3], [5,0,5], [5,1,0], [5,2,3], [5,3,0], [5,4,3], [5,5,8], [5,6,2], [5,7,1], [6,0,5], [6,1,0], [6,2,7], [6,3,3], [6,4,7], [6,5,7], [6,6,3], [6,7,4], [7,0,5], [7,1,0], [7,2,7], [7,3,1], [7,4,5], [7,5,5], [7,6,5], [7,7,8], [8,0,5], [8,1,0], [8,2,5], [8,3,0], [8,4,3], [8,5,3], [8,6,1], [8,7,1], [9,0,5], [9,1,0], [9,2,3], [9,3,0], [9,4,5], [9,5,3], [9,6,3], [9,7,5], [10,0,5], [10,1,0], [10,2,2], [10,3,0], [10,4,5], [10,5,5], [10,6,8], [10,7,8], [11,0,5], [11,1,0], [11,2,1], [11,3,0], [11,4,3], [11,5,3], [11,6,1], [11,7,3], [12,0,8], [12,1,0], [12,2,8], [12,3,8], [12,4,3], [12,5,9], [12,6,8], [12,7,8], [13,0,8], [13,1,0], [13,2,5], [13,3,0], [13,4,3], [13,5,8], [13,6,8], [13,7,5], [14,0,5], [14,1,0], [14,2,8], [14,3,1], [14,4,8], [14,5,8], [14,6,3], [14,7,1], [15,0,8], [15,1,0], [15,2,8], [15,3,1], [15,4,8], [15,5,9], [15,6,3], [15,7,5], [16,0,8], [16,1,0], [16,2,8], [16,3,0], [16,4,5], [16,5,8], [16,6,0], [16,7,3], [17,0,8], [17,1,0], [17,2,5], [17,3,0], [17,4,5], [17,5,8], [17,6,5], [17,7,8], [18,0,5], [18,1,0], [18,2,3], [18,3,8], [18,4,5], [18,5,8], [18,6,5], [18,7,8], [19,0,5], [19,1,0], [19,2,2], [19,3,8], [19,4,8], [19,5,8], [19,6,5], [19,7,3], [20,0,5], [20,1,0], [20,2,3], [20,3,5], [20,4,3], [20,5,5], [20,6,1], [20,7,1], [21,0,8], [21,1,0], [21,2,5], [21,3,0], [21,4,1], [21,5,8], [21,6,8], [21,7,3], [22,0,8], [22,1,0], [22,2,5], [22,3,0], [22,4,8], [22,5,9], [22,6,8], [22,7,8], [23,0,8], [23,1,0], [23,2,1], [23,3,0], [23,4,8], [23,5,5], [23,6,5], [23,7,3]];
+
+            const option = {
+                title: { show: false },
+                tooltip: { position: 'top', backgroundColor: 'rgba(255, 255, 255, 0.96)', borderColor: '#c8a063', textStyle: { color: '#333', fontFamily: 'Noto Serif SC' }, formatter: (p) => { const g = cuisineGroups.find(g => p.value[0] >= g.xStart && p.value[0] < g.xStart + 3); return `<b style="color:#9e2a2b">${g.name}</b><br/>风味：${xLabels[p.value[0]]}<br/>影响：${yLabels[p.value[1]]}`; } },
+                grid: { left: '3%', right: '3%', bottom: '15%', top: '15%', containLabel: true },
+                xAxis: { type: 'category', data: xLabels, axisLabel: { interval: 0, fontSize: 10, color: '#666', fontFamily: 'Noto Serif SC', rotate: 30 }, axisLine: { lineStyle: { color: 'rgba(0, 0, 0, 0.1)' } }, splitLine: { show: true, lineStyle: { type: 'dashed', color: 'rgba(0,0,0,0.03)' } } },
+                yAxis: { type: 'category', data: yLabels, axisLabel: { fontSize: 11, color: '#666', fontFamily: 'Noto Serif SC' }, axisLine: { show: false }, splitLine: { show: true, lineStyle: { type: 'dashed', color: 'rgba(0,0,0,0.03)' } } },
+                series: [ { name: '维度强度', type: 'scatter', symbolSize: v => v[2] * 4, itemStyle: { color: p => cuisineGroups.find(g => p.value[0] >= g.xStart && p.value[0] < g.xStart + 3).color, opacity: 0.85, shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.1)' }, data: data.filter(i => i[2] > 0), z: 10 } ]
+            };
+            myChart.setOption(option);
+            window.addEventListener('resize', () => myChart.resize());
+        })();
+
+        // --- 2. 交互文字介绍逻辑 ---
+        const pointDetails = {
+            '高原物候': { title: '高原物候', subtitle: '云端馈赠 · 纯净之味', desc: '在海拔3000米之上，稀薄的空气与强烈的日照赋予了食材独特的生命力。这里的烹饪注重还原自然的纯粹，让每一口食物都带着雪山的清冽。' },
+            '高山雪水': { title: '高山雪水', subtitle: '寒境润泽 · 凛冽清泉', desc: '雪山融水横贯大地，为高山植物提供最纯净的养分。冰冷的水流让食材质地更加紧实，孕育出耐寒而富有韧性的味觉基因。' },
+            '山野菌香': { title: '山野菌香', subtitle: '森林灵魂 · 隐匿之味', desc: '隐匿在深山老林中的菌类，是自然的秘密信使。它们吸取大地精华，自带一股泥土与雨露混合的迷人香气，是烹饪中无可替代的鲜味灵魂。' },
+            '川西老味': { title: '川西老味', subtitle: '时光沉淀 · 岁月醇香', desc: '跨越百年的老汤与腌技，是川西饮食的骨骼。不只有麻辣，更有那一份时间的厚重感，在唇齿间回荡着烟火气。' },
+            '锦绣巴蜀': { title: '锦绣巴蜀', subtitle: '川菜之魂 · 百变麻辣', desc: '豆瓣酱的红亮，花椒的跳跃。巴蜀之地将“辣”演变成了千变万化的艺术，在湿冷的盆地中，激发出最热烈的生命激情。' },
+            '湖广湿热': { title: '湖广湿热', subtitle: '祛湿智慧 · 辛香逻辑', desc: '两湖之地气候湿热，聪明的先民利用辣椒与香料的组合，在餐桌上构建出一套完美的祛湿逻辑。鲜中带辣，辣中透鲜。' },
+            '中原气象': { title: '中原气象', subtitle: '饮食正宗 · 咸鲜之根', desc: '作为中华文明的腹地，这里的饮食讲究中庸之道。咸鲜得宜，不偏不倚，是众多地方菜系演变的共同底色。' },
+            '江淮余韵': { title: '江淮余韵', subtitle: '淮扬清流 · 文人雅致', desc: '刀工如绣，火工如画。江淮之间的烹饪带有浓厚的文人气息，清淡中见真章，和平中显尊贵。' },
+            '黄山云雾': { title: '黄山云雾', subtitle: '徽菜密码 · 山珍重味', desc: '云雾缭绕的高山为徽菜提供了无穷的素材。重油、重色、重火功，将山间野味转化为浓郁醇厚的经典。' },
+            '江南水脉': { title: '江南水脉', subtitle: '鱼米之乡 · 甜美润泽', desc: '河网密布的江南，水产是绝对的主角。这里的味道总是带着一丝若有若无的清甜，正如江南的雨，温润而绵长。' },
+            '吴越风华': { title: '吴越风华', subtitle: '浙菜精髓 · 细致委婉', desc: '东坡肉的软糯，西湖醋鱼的鲜嫩。吴越之地的饮食既有书生气的雅，也有市井气的真。' },
+            '淮扬清鲜': { title: '淮扬清鲜', subtitle: '淮上名厨 · 极简至味', desc: '追求食材的极致鲜美。不使用过多的调味，全凭食材本身的质地与厨师对火候的精准拿捏。' },
+            '南岭光照': { title: '南岭光照', subtitle: '粤地基因 · 原汁原味', desc: '充足的光照让食材生长旺盛。粤菜以此为基础，构建了追求原汁原味的烹饪体系。' },
+            '东海季风': { title: '东海季风', subtitle: '海洋慷慨 · 咸潮之鲜', desc: '太平洋的季风带来了丰富的海洋资源。从鱼虾到贝类，咸潮的气息被厨师捕捉，转化为最灵动的鲜活。' },
+            '滨海高湿': { title: '滨海高湿', subtitle: '腌渍美学 · 时间艺术', desc: '在高湿的沿海环境，脱水与腌渍不仅是保存手段，更是一种独特的风味创造过程。' },
+            '三湘香辣': { title: '三湘香辣', subtitle: '剁椒灵魂 · 热辣奔放', desc: '火红的剁椒是湘菜的旗帜。它不像川味的麻，而是一种直抵灵魂的香辣，热烈而纯粹。' },
+            '云贵秘境': { title: '云贵秘境', subtitle: '少数智慧 · 奇巧酸辣', desc: '多民族聚居的云贵，将自然界的各种奇巧食材信手拈来。酸汤、野果、香料，构成了一幅斑斓的味觉地图。' },
+            '岭南丰鲜': { title: '岭南丰鲜', subtitle: '粤式经典 · 追求本真', desc: '岭南大地物产丰盛。这里的烹饪哲学是“不时不食”，每一道菜都是对食材新鲜度的最高致敬。' },
+            '南海渔火': { title: '南海渔火', subtitle: '深海馈赠 · 鲜甜之极', desc: '深入南海腹地，带回最原始的深海味道。无需繁杂修饰，简单的蒸煮即可唤醒极致的鲜甜。' },
+            '八闽山海': { title: '八闽山海', subtitle: '闽菜传奇 · 煨炖醇香', desc: '坛启荤香飘四邻。佛跳墙的故事在这里流传，展现了山海素材交融后的极致鲜醇。' },
+            '绝味辛香': { title: '绝味辛香', subtitle: '香料王国 · 调和艺术', desc: '不仅是辣椒，更是八角、桂皮、草果等香料的完美合鸣。在这里，调味是一场宏大的交响乐。' }
+        };
+
+        function updateInfo(key) {
+            const data = pointDetails[key];
+            if (!data) return;
+
+            const container = document.getElementById('info-container');
+            container.classList.remove('active');
+
+            setTimeout(() => {
+                document.getElementById('info-title').innerText = data.title;
+                document.getElementById('info-subtitle').innerText = data.subtitle;
+                document.getElementById('info-desc').innerText = data.desc;
+                container.classList.add('active');
+            }, 300);
+        }
+
+        // 初始化
+        window.onload = () => updateInfo('高原物候');
+    </script>
+</body>
+</html>

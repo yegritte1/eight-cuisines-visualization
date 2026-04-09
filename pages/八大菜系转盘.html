@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>八大菜系转盘 - 今晚吃什么</title>
+    <script src="../libs/react/react.production.min.js"></script>
+    <script src="../libs/react/react-dom.production.min.js"></script>
+    <script src="../libs/react/babel.min.js"></script>
+    <script src="../libs/tailwind/tailwind.js"></script>
+    <link href="../libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #f0ebe5 0%, #e8e3dc 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .ink-wash-bg {
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(80, 70, 60, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(80, 70, 60, 0.03) 0%, transparent 50%);
+        }
+
+        .calligraphy {
+            font-family: 'Ma Shan Zheng', cursive;
+        }
+
+        .elegant-serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        .artistic {
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .slide-down {
+            animation: slideDown 0.6s ease-out;
+        }
+
+        /* 转盘旋转动画 */
+        .wheel-spinning {
+            animation: spin-wheel 3s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+
+        @keyframes spin-wheel {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(1800deg); }
+        }
+
+        /* 印章效果 */
+        .seal-stamp {
+            filter: drop-shadow(2px 2px 4px rgba(139, 69, 61, 0.3));
+        }
+
+        /* 水墨边框 */
+        .ink-border {
+            border: 2px solid;
+            border-image: linear-gradient(45deg, #5a4a42 0%, #8b7a6f 50%, #5a4a42 100%) 1;
+        }
+
+        /* 祥云背景 */
+        .cloud-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 20c-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10-4.5-10-10-10zm0 2c4.4 0 8 3.6 8 8s-3.6 8-8 8-8-3.6-8-8 3.6-8 8-8z' fill='%235a4a42' fill-opacity='0.03'/%3E%3C/svg%3E");
+        }
+
+        /* 响应式媒体查询 */
+        @media (prefers-reduced-motion: reduce) {
+            .float-animation, .wheel-spinning {
+                animation: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .wheel-container {
+                transform: scale(0.8);
+            }
+        }
+    
+        /* 返回按钮 - 小箭头样式 */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: #c8302e;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body class="ink-wash-bg cloud-pattern">
+        <!-- 返回按钮 -->
+    <a href="../catalog.html" class="back-button" title="返回目录">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+<div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // 八大菜系数据 - 使用古色古香中国传统色（极低饱和度）
+        const cuisineData = {
+            '鲁菜': {
+                color: '#9d9183',  // 苍黄
+                dishes: [
+                    { name: '葱烧海参', intro: '鲁菜经典名菜，海参软糯，葱香浓郁，是胶东海鲜的代表作', tags: ['鲜香', '胶东'] },
+                    { name: '九转大肠', intro: '济南名菜，肥而不腻，酸甜咸辣香五味俱全，工艺考究', tags: ['酸甜', '济南'] },
+                    { name: '糖醋鲤鱼', intro: '济南传统名菜，色泽金黄，外焦里嫩，酸甜适口，鱼肉鲜美', tags: ['酸甜', '煎炸'] }
+                ]
+            },
+            '川菜': {
+                color: '#a98b7e',  // 驼色
+                dishes: [
+                    { name: '麻婆豆腐', intro: '川菜代表，麻辣鲜香，豆腐嫩滑，是成都家常名菜', tags: ['麻辣', '成都'] },
+                    { name: '宫保鸡丁', intro: '色泽红亮，鸡肉滑嫩，花生酥脆，酸甜微辣，百吃不厌', tags: ['酸甜辣', '滑炒'] },
+                    { name: '水煮鱼', intro: '重庆江湖菜，鱼片鲜嫩，麻辣过瘾，油而不腻', tags: ['麻辣', '重庆'] }
+                ]
+            },
+            '粤菜': {
+                color: '#869f8f',  // 青灰
+                dishes: [
+                    { name: '白切鸡', intro: '粤菜经典，皮爽肉滑，清淡鲜美，保持食材本味', tags: ['清淡', '白灼'] },
+                    { name: '烧鹅', intro: '广州名菜，皮脆肉嫩，色泽金红，香气四溢', tags: ['烧腊', '广州'] },
+                    { name: '虾饺', intro: '广式点心之王，皮薄馅鲜，晶莹剔透，一口一个', tags: ['清蒸', '点心'] }
+                ]
+            },
+            '苏菜': {
+                color: '#7e9099',  // 蓝灰
+                dishes: [
+                    { name: '松鼠桂鱼', intro: '苏州名菜，造型优美，外脆里嫩，酸甜适口', tags: ['酸甜', '苏州'] },
+                    { name: '狮子头', intro: '扬州经典，肉质软嫩，肥而不腻，入口即化', tags: ['红烧', '扬州'] },
+                    { name: '盐水鸭', intro: '南京特产，皮白肉嫩，清淡鲜香，久食不腻', tags: ['盐水', '南京'] }
+                ]
+            },
+            '浙菜': {
+                color: '#9b8e99',  // 藕荷灰
+                dishes: [
+                    { name: '西湖醋鱼', intro: '杭州名菜，鱼肉鲜嫩，酸甜适口，是杭帮菜代表', tags: ['酸甜', '杭州'] },
+                    { name: '东坡肉', intro: '色泽红亮，肥而不腻，软糯香甜，入口即化', tags: ['红烧', '杭州'] },
+                    { name: '龙井虾仁', intro: '杭州特色，虾仁鲜嫩，茶香扑鼻，清新淡雅', tags: ['清炒', '龙井'] }
+                ]
+            },
+            '闽菜': {
+                color: '#b3a089',  // 沙棕
+                dishes: [
+                    { name: '佛跳墙', intro: '福建首席名菜，用料名贵，制作考究，汤浓味醇', tags: ['炖煮', '福州'] },
+                    { name: '荔枝肉', intro: '福州名菜，色如荔枝，酸甜适口，香味独特', tags: ['酸甜', '福州'] },
+                    { name: '沙茶面', intro: '厦门特色，汤头浓郁，配料丰富，沙茶香浓', tags: ['沙茶', '厦门'] }
+                ]
+            },
+            '湘菜': {
+                color: '#a8867f',  // 绛灰
+                dishes: [
+                    { name: '剁椒鱼头', intro: '湘菜名菜，鱼肉鲜嫩，剁椒鲜辣，红艳诱人', tags: ['香辣', '蒸制'] },
+                    { name: '毛氏红烧肉', intro: '色泽红亮，肥而不腻，甜辣适口，软糯香浓', tags: ['红烧', '湘潭'] },
+                    { name: '小炒黄牛肉', intro: '牛肉鲜嫩，辣椒香辣，是湘西经典下饭菜', tags: ['香辣', '湘西'] }
+                ]
+            },
+            '徽菜': {
+                color: '#7d8c96',  // 墨灰
+                dishes: [
+                    { name: '臭鳜鱼', intro: '徽州名菜，闻着臭吃着香，肉质鲜嫩，风味独特', tags: ['腌制', '徽州'] },
+                    { name: '毛豆腐', intro: '徽州特色，豆腐表面长满白毛，煎后外焦里嫩', tags: ['发酵', '徽州'] },
+                    { name: '一品锅', intro: '徽州传统，层次分明，荤素搭配，营养丰富', tags: ['炖煮', '徽州'] }
+                ]
+            }
+        };
+
+        // 获取所有菜品
+        const getAllDishes = () => {
+            const dishes = [];
+            Object.keys(cuisineData).forEach(cuisine => {
+                cuisineData[cuisine].dishes.forEach(dish => {
+                    dishes.push({
+                        ...dish,
+                        cuisine: cuisine,
+                        color: cuisineData[cuisine].color
+                    });
+                });
+            });
+            return dishes;
+        };
+
+        const CuisineWheelApp = () => {
+            const [isSpinning, setIsSpinning] = useState(false);
+            const [selectedDish, setSelectedDish] = useState(null);
+            const [rotation, setRotation] = useState(0);
+            const [showResult, setShowResult] = useState(false);
+            const wheelRef = useRef(null);
+
+            const allDishes = getAllDishes();
+            const cuisines = Object.keys(cuisineData);
+
+            const handleSpin = () => {
+                if (isSpinning) return;
+
+                setIsSpinning(true);
+                setShowResult(false);
+
+                // 随机选择一道菜
+                const randomIndex = Math.floor(Math.random() * allDishes.length);
+                const dish = allDishes[randomIndex];
+
+                // 计算旋转角度（多转几圈 + 随机角度）
+                const extraRotations = 5;
+                const randomDegree = Math.floor(Math.random() * 360);
+                const totalRotation = rotation + (360 * extraRotations) + randomDegree;
+
+                setRotation(totalRotation);
+
+                // 3秒后停止并显示结果
+                setTimeout(() => {
+                    setIsSpinning(false);
+                    setSelectedDish(dish);
+                    setShowResult(true);
+                }, 3000);
+            };
+
+            const closeResult = () => {
+                setShowResult(false);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+                    {/* 标题 */}
+                    <div className="text-center mb-8 md:mb-12 slide-down">
+                        <h1 className="calligraphy text-5xl md:text-7xl mb-4 tracking-wider" style={{ color: '#4a3a32' }}>
+                            八大菜系转盘
+                        </h1>
+                        <p className="elegant-serif text-xl md:text-2xl" style={{ color: '#6b5a4d' }}>
+                            今晚吃什么？让命运来决定
+                        </p>
+                        <div className="mt-4 flex items-center justify-center gap-2">
+                            <div className="h-px w-12" style={{ backgroundColor: '#9d8b7f' }}></div>
+                            <span className="text-sm" style={{ color: '#8b7a6f' }}>转动转盘，开启美食之旅</span>
+                            <div className="h-px w-12" style={{ backgroundColor: '#9d8b7f' }}></div>
+                        </div>
+                    </div>
+
+                    {/* 转盘容器 */}
+                    <div className="relative wheel-container mb-8">
+                        {/* 指针 */}
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-30 pointer-events-none">
+                            <svg width="40" height="60" viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 60L0 0H40L20 60Z" fill="#b88e87" opacity="0.75"/>
+                                <circle cx="20" cy="15" r="8" fill="#a37d76"/>
+                            </svg>
+                        </div>
+
+                        {/* 外圈转盘 - 菜系 */}
+                        <div
+                            ref={wheelRef}
+                            className="relative w-[400px] h-[400px] md:w-[500px] md:h-[500px] rounded-full shadow-2xl"
+                            style={{
+                                transform: `rotate(${rotation}deg)`,
+                                transition: isSpinning ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
+                                backgroundColor: '#f5f0eb'
+                            }}
+                        >
+                            {/* 外圈 - 菜系扇形 */}
+                            <svg className="w-full h-full" viewBox="0 0 400 400">
+                                {cuisines.map((cuisine, index) => {
+                                    const angle = (360 / cuisines.length);
+                                    const startAngle = index * angle - 90;
+                                    const endAngle = startAngle + angle;
+
+                                    const startRad = (startAngle * Math.PI) / 180;
+                                    const endRad = (endAngle * Math.PI) / 180;
+
+                                    const outerRadius = 200;
+                                    const innerRadius = 140;
+
+                                    const x1 = 200 + outerRadius * Math.cos(startRad);
+                                    const y1 = 200 + outerRadius * Math.sin(startRad);
+                                    const x2 = 200 + outerRadius * Math.cos(endRad);
+                                    const y2 = 200 + outerRadius * Math.sin(endRad);
+                                    const x3 = 200 + innerRadius * Math.cos(endRad);
+                                    const y3 = 200 + innerRadius * Math.sin(endRad);
+                                    const x4 = 200 + innerRadius * Math.cos(startRad);
+                                    const y4 = 200 + innerRadius * Math.sin(startRad);
+
+                                    const largeArc = angle > 180 ? 1 : 0;
+
+                                    const path = `
+                                        M ${x1} ${y1}
+                                        A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x2} ${y2}
+                                        L ${x3} ${y3}
+                                        A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x4} ${y4}
+                                        Z
+                                    `;
+
+                                    const textAngle = startAngle + angle / 2;
+                                    const textRadius = (outerRadius + innerRadius) / 2;
+                                    const textX = 200 + textRadius * Math.cos((textAngle * Math.PI) / 180);
+                                    const textY = 200 + textRadius * Math.sin((textAngle * Math.PI) / 180);
+
+                                    return (
+                                        <g key={cuisine}>
+                                            <path
+                                                d={path}
+                                                fill={cuisineData[cuisine].color}
+                                                opacity="0.7"
+                                                stroke="#6b5a4d"
+                                                strokeWidth="1.5"
+                                            />
+                                            <text
+                                                x={textX}
+                                                y={textY}
+                                                fill="#f5f0eb"
+                                                fontSize="20"
+                                                fontWeight="bold"
+                                                textAnchor="middle"
+                                                dominantBaseline="middle"
+                                                transform={`rotate(${textAngle + 90}, ${textX}, ${textY})`}
+                                                style={{ fontFamily: "'Noto Serif SC', serif" }}
+                                            >
+                                                {cuisine}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+
+                                {/* 内圈 - 菜品 */}
+                                {allDishes.map((dish, index) => {
+                                    const angle = (360 / allDishes.length);
+                                    const startAngle = index * angle - 90;
+                                    const endAngle = startAngle + angle;
+
+                                    const startRad = (startAngle * Math.PI) / 180;
+                                    const endRad = (endAngle * Math.PI) / 180;
+
+                                    const outerRadius = 130;
+                                    const innerRadius = 0;
+
+                                    const x1 = 200 + outerRadius * Math.cos(startRad);
+                                    const y1 = 200 + outerRadius * Math.sin(startRad);
+                                    const x2 = 200 + outerRadius * Math.cos(endRad);
+                                    const y2 = 200 + outerRadius * Math.sin(endRad);
+
+                                    const largeArc = angle > 180 ? 1 : 0;
+
+                                    const path = `
+                                        M 200 200
+                                        L ${x1} ${y1}
+                                        A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${x2} ${y2}
+                                        Z
+                                    `;
+
+                                    const textAngle = startAngle + angle / 2;
+                                    const textRadius = outerRadius * 0.6;
+                                    const textX = 200 + textRadius * Math.cos((textAngle * Math.PI) / 180);
+                                    const textY = 200 + textRadius * Math.sin((textAngle * Math.PI) / 180);
+
+                                    return (
+                                        <g key={`${dish.cuisine}-${dish.name}`}>
+                                            <path
+                                                d={path}
+                                                fill={dish.color}
+                                                opacity="0.5"
+                                                stroke="#8b7a6f"
+                                                strokeWidth="0.8"
+                                            />
+                                            <text
+                                                x={textX}
+                                                y={textY}
+                                                fill="#f5f0eb"
+                                                fontSize="11"
+                                                fontWeight="500"
+                                                textAnchor="middle"
+                                                dominantBaseline="middle"
+                                                transform={`rotate(${textAngle + 90}, ${textX}, ${textY})`}
+                                                style={{ fontFamily: "'Noto Sans SC', sans-serif" }}
+                                            >
+                                                {dish.name}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+                            </svg>
+                        </div>
+
+                        {/* 中心按钮 */}
+                        <button
+                            onClick={handleSpin}
+                            disabled={isSpinning}
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 md:w-32 md:h-32 rounded-full shadow-2xl z-20 cursor-pointer transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed seal-stamp"
+                            style={{
+                                background: isSpinning ? 'linear-gradient(135deg, #b39a8a 0%, #a38976 100%)' : 'linear-gradient(135deg, #b88e87 0%, #a37d76 100%)',
+                                color: '#f5f0eb',
+                                fontFamily: "'Ma Shan Zheng', cursive"
+                            }}
+                        >
+                            <div className="flex flex-col items-center justify-center">
+                                <span className="text-2xl md:text-3xl font-bold">{isSpinning ? '转' : '开始'}</span>
+                                <span className="text-xs md:text-sm mt-1">{isSpinning ? '中...' : '抽奖'}</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* 装饰元素 */}
+                    <div className="text-center text-sm elegant-serif" style={{ color: '#8b7a6f' }}>
+                        <p>点击中心按钮，开启今日美食之旅</p>
+                    </div>
+
+                    {/* 结果卡片弹窗 */}
+                    {showResult && selectedDish && (
+                        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 fade-in" onClick={closeResult}>
+                            <div
+                                className="rounded-2xl shadow-2xl max-w-md w-full p-8 ink-border relative"
+                                style={{
+                                    background: 'linear-gradient(to bottom, #f5f0eb 0%, #ebe5dc 100%)'
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* 关闭按钮 */}
+                                <button
+                                    onClick={closeResult}
+                                    className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 cursor-pointer"
+                                    style={{
+                                        backgroundColor: '#d4c9bc',
+                                        color: '#5a4a42'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#c4b9ac'}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = '#d4c9bc'}
+                                >
+                                    <span className="text-xl">×</span>
+                                </button>
+
+                                {/* 印章装饰 */}
+                                <div className="absolute top-4 left-4 w-16 h-16 rounded-sm opacity-75 seal-stamp flex items-center justify-center"
+                                    style={{ backgroundColor: '#b88e87' }}>
+                                    <span className="text-white text-xs calligraphy">美食</span>
+                                </div>
+
+                                {/* 内容 */}
+                                <div className="mt-8">
+                                    <h2 className="calligraphy text-4xl text-center mb-2" style={{ color: '#4a3a32' }}>
+                                        {selectedDish.name}
+                                    </h2>
+
+                                    {/* 菜系标签 */}
+                                    <div className="flex justify-center mb-6">
+                                        <span
+                                            className="px-4 py-1 rounded-full text-sm elegant-serif"
+                                            style={{
+                                                backgroundColor: selectedDish.color,
+                                                color: '#f5f0eb'
+                                            }}
+                                        >
+                                            {selectedDish.cuisine}
+                                        </span>
+                                    </div>
+
+                                    {/* 分隔线 */}
+                                    <div className="flex items-center justify-center mb-4">
+                                        <div className="h-px w-12" style={{ backgroundColor: '#9d8b7f' }}></div>
+                                        <span className="mx-3" style={{ color: '#9d8b7f' }}>❀</span>
+                                        <div className="h-px w-12" style={{ backgroundColor: '#9d8b7f' }}></div>
+                                    </div>
+
+                                    {/* 简介 */}
+                                    <p className="text-center leading-relaxed mb-6 elegant-serif" style={{ color: '#5a4a42' }}>
+                                        {selectedDish.intro}
+                                    </p>
+
+                                    {/* 特色标签 */}
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {selectedDish.tags.map((tag, index) => (
+                                            <span
+                                                key={index}
+                                                className="px-3 py-1 rounded-full text-sm border"
+                                                style={{
+                                                    backgroundColor: 'rgba(245, 240, 235, 0.8)',
+                                                    color: '#6b5a4d',
+                                                    borderColor: '#c4b9ac'
+                                                }}
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+
+                                    {/* 底部文字 */}
+                                    <div className="mt-6 text-center">
+                                        <p className="text-sm calligraphy" style={{ color: '#8b7a6f' }}>
+                                            今晚就吃它了！
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<CuisineWheelApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>

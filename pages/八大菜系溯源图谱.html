@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寻根与发散 | 八大菜系溯源图谱</title>
+    <script src="../libs/tailwind/tailwind.js"></script>
+    <script src="../libs/echarts/echarts.min.js"></script>
+    <script src="../libs/gsap/gsap.min.js"></script>
+    <link href="../libs/fonts/fonts-local.css" rel="stylesheet">
+    <style>
+
+        :root {
+            --paper: #FCF9F2;
+            --ink: #2C2C2C;
+            --vermilion: #A63F3F;
+            --gold: #B89C6A;
+            --jade: #627254;
+        }
+
+        body {
+            background-color: var(--paper);
+            color: var(--ink);
+            font-family: 'Noto Sans SC', sans-serif;
+            overflow: hidden;
+        }
+
+        .serif { font-family: 'Noto Serif SC', serif; }
+
+        /* 宣纸纹理 */
+        .paper-texture {
+            position: fixed; inset: 0;
+            background-image: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+            opacity: 0.6; pointer-events: none; z-index: 5;
+        }
+
+        /* 布局调整 - 移除卡片感，直接浮动在背景上 */
+        .bento-container {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            grid-template-rows: 1fr 180px;
+            gap: 20px;
+            height: 100vh;
+            padding: 40px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .bento-item {
+            background: transparent;
+            padding: 0;
+            transition: all 0.3s ease;
+        }
+
+        .tree-item { grid-row: 1 / 2; }
+        .map-item { grid-row: 1 / 2; position: relative; }
+        .detail-item {
+            grid-column: 1 / -1;
+            grid-row: 2 / 3;
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            align-items: center;
+            padding-top: 20px;
+        }
+
+        .site-title {
+            font-size: 2.2rem; font-weight: 900; letter-spacing: 0.2em;
+            color: var(--vermilion); border-left: 6px solid var(--vermilion);
+            padding-left: 20px;
+        }
+
+        .chart-container { width: 100%; height: 100%; }
+
+        /* 内容展示 - 纯文字感 */
+        .feature-item {
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: var(--ink);
+            opacity: 0.8;
+            position: relative;
+            padding-left: 15px;
+        }
+        .feature-item::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--gold);
+        }
+
+        /* 自定义滚动条 */
+        .detail-item::-webkit-scrollbar { height: 4px; }
+        .detail-item::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+
+        /* 墨迹装饰 */
+        .ink-splatter {
+            position: fixed; opacity: 0.05; pointer-events: none; z-index: 1;
+        }
+
+        #active-cuisine-display {
+            position: absolute; top: 30px; left: 30px;
+            font-size: 5rem; font-weight: 900; color: rgba(166, 63, 63, 0.05);
+            pointer-events: none; z-index: 0;
+        }
+    
+        /* 返回按钮 - 小箭头样式 */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 36px;
+            height: 36px;
+            background: rgba(200, 48, 46, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background: rgba(200, 48, 46, 0.25);
+            transform: scale(1.1);
+        }
+
+        .back-button svg {
+            width: 18px;
+            height: 18px;
+            stroke: #c8302e;
+            stroke-width: 2.5;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+        <!-- 返回按钮 -->
+    <a href="../catalog.html" class="back-button" title="返回目录">
+        <svg viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+    </a>
+
+<div class="paper-texture"></div>
+
+    <div class="bento-container">
+        <!-- Sidebar: Tree Chart -->
+        <aside class="bento-item tree-item">
+            <h2 class="serif text-xl font-bold mb-4 flex items-center gap-2 text-vermilion">
+                <span class="w-1 h-6 bg-vermilion inline-block"></span> 菜系流派树
+            </h2>
+            <div id="tree-chart" class="chart-container"></div>
+        </aside>
+
+        <!-- Main: Map Chart -->
+        <main class="bento-item map-item overflow-hidden">
+            <div id="active-cuisine-display" class="serif">鲁</div>
+            <div id="map-chart" class="chart-container"></div>
+        </main>
+
+        <!-- Bottom: Ingredients detail -->
+        <section id="detail-panel" class="bento-item detail-item">
+            <div class="text-gray-400 serif italic flex-shrink-0 w-48 border-r border-gold/20 pr-4">
+                点击左侧菜系<br>探寻灵魂食材之源
+            </div>
+            <!-- Dynamic cards go here -->
+        </section>
+    </div>
+
+    <script>
+        // --- 核心数据结构 ---
+        const cuisineData = {
+            name: "八大菜系",
+            children: [
+                {
+                    name: "鲁菜",
+                    province: "shandong",
+                    center: [117.1, 36.6],
+                    sources: [
+                        { name: "胶东菜", pos: [121.3, 37.5] },
+                        { name: "济南菜", pos: [117.0, 36.6] },
+                        { name: "孔府菜", pos: [117.0, 35.6] },
+                        { name: "淄博菜", pos: [118.0, 36.8] }
+                    ],
+                    branches: [
+                        { name: "胶东流派", desc: "以烹制海鲜见长，讲究清鲜脆嫩，保留食材原汁原味。" },
+                        { name: "济南流派", desc: "擅长爆、炒、烧、炸，汤味浓郁，咸鲜纯正，极其注重调汤。" },
+                        { name: "孔府菜", desc: "制作精细，讲究礼仪，是官府菜的典型代表，历史积淀深厚。" }
+                    ]
+                },
+                {
+                    name: "川菜",
+                    province: "sichuan",
+                    center: [104.0, 30.6],
+                    sources: [
+                        { name: "成都菜", pos: [104.0, 30.6] },
+                        { name: "重庆菜", pos: [106.5, 29.5] },
+                        { name: "自贡菜", pos: [104.7, 29.3] },
+                        { name: "乐山菜", pos: [103.7, 29.5] }
+                    ],
+                    branches: [
+                        { name: "上河帮", desc: "以成都、乐山菜为代表，风格温婉，用料精细，口味相对平和。" },
+                        { name: "下河帮", desc: "以重庆、万州菜为代表，火爆刚烈，大油大火，江湖气息浓郁。" },
+                        { name: "小河帮", desc: "以自贡、内江菜为代表，擅长盐帮菜，味厚重、味浓鲜。" }
+                    ]
+                },
+                {
+                    name: "粤菜",
+                    province: "guangdong",
+                    center: [113.3, 23.1],
+                    sources: [
+                        { name: "广州菜", pos: [113.2, 23.1] },
+                        { name: "潮州菜", pos: [116.6, 23.6] },
+                        { name: "客家菜", pos: [114.4, 23.0] },
+                        { name: "顺德菜", pos: [113.2, 22.8] }
+                    ],
+                    branches: [
+                        { name: "广府菜", desc: "追求鲜、嫩、滑、爽，讲究原汁原味，清而不淡，选料广泛。" },
+                        { name: "潮州菜", desc: "擅长烹制海鲜，注重刀工和佐料，口味清鲜，制作极其考究。" },
+                        { name: "东江客家菜", desc: "下油重，味偏咸，擅长砂锅烹饪，具有浓厚的乡村山野风味。" }
+                    ]
+                },
+                {
+                    name: "苏菜",
+                    province: "jiangsu",
+                    center: [118.8, 32.1],
+                    sources: [
+                        { name: "淮安菜", pos: [119.0, 33.5] },
+                        { name: "扬州菜", pos: [119.4, 32.3] },
+                        { name: "苏州菜", pos: [120.6, 31.3] },
+                        { name: "南京菜", pos: [118.8, 32.0] }
+                    ],
+                    branches: [
+                        { name: "淮扬菜", desc: "选料严谨，刀工精细，注重火候，口味平淡且追求清雅之感。" },
+                        { name: "苏锡菜", desc: "用料讲究，造型精美，口味清淡微甜，具有典型的江南水乡特色。" },
+                        { name: "徐海菜", desc: "重油重色，口味厚重，受鲁菜影响较深，具有北方豪放的风格。" }
+                    ]
+                },
+                {
+                    name: "闽菜",
+                    province: "fujian",
+                    center: [119.3, 26.1],
+                    sources: [
+                        { name: "福州菜", pos: [119.3, 26.0] },
+                        { name: "厦门菜", pos: [118.1, 24.4] },
+                        { name: "泉州菜", pos: [118.6, 24.8] },
+                        { name: "莆田菜", pos: [119.0, 25.4] }
+                    ],
+                    branches: [
+                        { name: "福州菜", desc: "擅长制汤，酸甜适口，注重火候，菜肴色彩绚丽，造型美观。" },
+                        { name: "闽南菜", desc: "注重食材本味，善用香醋、白糖调味，海鲜菜肴极具地方特色。" },
+                        { name: "闽西菜", desc: "以山珍为主要食材，具有浓郁的客家风味，重油偏咸，口味厚重。" }
+                    ]
+                },
+                {
+                    name: "浙菜",
+                    province: "zhejiang",
+                    center: [120.2, 30.3],
+                    sources: [
+                        { name: "杭州菜", pos: [120.1, 30.2] },
+                        { name: "宁波菜", pos: [121.5, 29.8] },
+                        { name: "绍兴菜", pos: [120.5, 30.0] },
+                        { name: "温州菜", pos: [120.6, 28.0] }
+                    ],
+                    branches: [
+                        { name: "杭帮菜", desc: "口味清淡，选料讲究，造型精致，充满西湖般的诗情画意。" },
+                        { name: "甬帮菜", desc: "以海鲜见长，重原味，讲究鲜嫩，具有浓厚的海边渔家特色。" },
+                        { name: "瓯帮菜", desc: "选料精细，烹调技法独特，口味清新爽脆，色泽鲜亮。" }
+                    ]
+                },
+                {
+                    name: "湘菜",
+                    province: "hunan",
+                    center: [112.98, 28.23],
+                    sources: [
+                        { name: "长沙菜", pos: [112.9, 28.2] },
+                        { name: "衡阳菜", pos: [112.6, 26.8] },
+                        { name: "常德菜", pos: [111.6, 29.0] },
+                        { name: "湘西菜", pos: [109.7, 28.3] }
+                    ],
+                    branches: [
+                        { name: "湘江流域", desc: "重油色，浓香辣，擅长烧、蒸、炖，口感软烂入味。" },
+                        { name: "洞庭湖区", desc: "以烹制河鲜、禽畜见长，多用炖、焖技法，芡重油大。" },
+                        { name: "湘西山区", desc: "擅长制作腊肉和山珍，酸辣咸鲜，具有浓烈的山野气息。" }
+                    ]
+                },
+                {
+                    name: "徽菜",
+                    province: "anhui",
+                    center: [117.3, 31.9],
+                    sources: [
+                        { name: "屯溪菜", pos: [118.3, 29.7] },
+                        { name: "绩溪菜", pos: [118.5, 30.0] },
+                        { name: "歙县菜", pos: [118.4, 29.8] },
+                        { name: "安庆菜", pos: [117.0, 30.5] }
+                    ],
+                    branches: [
+                        { name: "皖南流派", desc: "擅长烹制山珍野味，重油、重火、重色，讲究以火腿佐味。" },
+                        { name: "沿江流派", desc: "擅长烹制河鲜 and 禽畜，讲究火功，口味淳厚，芡浓味重。" },
+                        { name: "沿淮流派", desc: "口味较重，受中原文化影响，菜肴具有淳厚的泥土芬芳。" }
+                    ]
+                }
+            ]
+        };
+
+
+
+        const treeChart = echarts.init(document.getElementById('tree-chart'));
+        const mapChart = echarts.init(document.getElementById('map-chart'));
+
+
+        // --- 树图配置 ---
+        function initTree() {
+            // 转换数据为树格式
+            const data = {
+                name: "八大菜系",
+                children: cuisineData.children.map(c => ({
+                    name: c.name,
+                    children: c.branches.map(b => ({ name: b.name, value: c.name }))
+                }))
+            };
+
+            treeChart.setOption({
+                tooltip: { trigger: 'item', triggerOn: 'mousemove' },
+                series: [{
+                    type: 'tree',
+                    data: [data],
+                    top: '1%', left: '15%', bottom: '1%', right: '25%',
+                    symbolSize: 10,
+                    symbol: 'circle',
+                    itemStyle: { color: '#B89C6A', borderColor: '#B89C6A' },
+                    label: {
+                        position: 'left', verticalAlign: 'middle', align: 'right',
+                        fontSize: 14, fontFamily: 'Noto Serif SC', fontWeight: 700
+                    },
+                    leaves: {
+                        label: { position: 'right', verticalAlign: 'middle', align: 'left', color: '#666', fontWeight: 400 }
+                    },
+                    emphasis: { focus: 'descendant' },
+                    expandAndCollapse: true,
+                    animationDuration: 550,
+                    animationDurationUpdate: 750
+                }]
+            });
+
+            treeChart.on('click', params => {
+                const cuisineName = params.data.value || params.data.name;
+                const found = cuisineData.children.find(c => c.name === cuisineName);
+                if (found) selectCuisine(found);
+            });
+        }
+
+        // --- 地图配置 ---
+        async function initMap() {
+            const res = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+            const chinaJson = await res.json();
+            echarts.registerMap('china', chinaJson);
+
+            const option = {
+                backgroundColor: 'transparent',
+                geo: {
+                    map: 'china',
+                    roam: true,
+                    layoutCenter: ['50%', '50%'],
+                    layoutSize: '110%',
+                    itemStyle: {
+                        areaColor: 'rgba(44, 44, 44, 0.05)',
+                        borderColor: 'rgba(44, 44, 44, 0.1)',
+                        borderWidth: 1
+                    },
+                    emphasis: { itemStyle: { areaColor: 'rgba(184, 156, 106, 0.1)' } }
+                },
+                series: []
+            };
+            mapChart.setOption(option);
+
+            // 初始选择鲁菜
+            selectCuisine(cuisineData.children[0]);
+        }
+
+        // --- 联动逻辑 ---
+        function selectCuisine(cuisine) {
+            // 1. 更新背景文字
+            document.getElementById('active-cuisine-display').innerText = cuisine.name[0];
+
+            // 2. 更新地图视角与溯源连线
+            const sourcesData = cuisine.sources.map(s => ({
+                name: s.name,
+                value: [...s.pos, 10]
+            }));
+
+            const linesData = cuisine.sources.map(s => ({
+                fromName: s.name,
+                toName: cuisine.name,
+                coords: [s.pos, cuisine.center]
+            }));
+
+            mapChart.setOption({
+                geo: {
+                    center: cuisine.center,
+                    zoom: 5
+                },
+                series: [
+                    {
+                        name: '省份中心',
+                        type: 'effectScatter',
+                        coordinateSystem: 'geo',
+                        data: [{ name: cuisine.name, value: [...cuisine.center, 20] }],
+                        symbolSize: 20,
+                        rippleEffect: { brushType: 'stroke', scale: 4 },
+                        itemStyle: { color: '#A63F3F' },
+                        zlevel: 1
+                    },
+                    {
+                        name: '分部来源',
+                        type: 'scatter',
+                        coordinateSystem: 'geo',
+                        data: sourcesData,
+                        symbolSize: 8,
+                        label: {
+                            show: true, position: 'top', formatter: '{b}',
+                            backgroundColor: 'rgba(255,255,255,0.7)',
+                            padding: [2, 4], borderRadius: 2,
+                            color: '#2C2C2C', fontSize: 10
+                        },
+                        itemStyle: { color: '#B89C6A', opacity: 0.8 },
+                        zlevel: 2
+                    },
+                    {
+                        name: '溯源汇聚',
+                        type: 'lines',
+                        coordinateSystem: 'geo',
+                        zlevel: 1,
+                        effect: { show: true, period: 4, trailLength: 0.4, symbol: 'circle', symbolSize: 3 },
+                        lineStyle: { color: '#B89C6A', width: 1.5, opacity: 0.3, curveness: 0.2 },
+                        data: linesData
+                    }
+                ]
+            });
+
+            // 3. 更新详情面板 (纯文字流派介绍)
+            const panel = document.getElementById('detail-panel');
+            panel.innerHTML = `
+                <div class="text-jade serif font-bold flex-shrink-0 w-48 pr-4">
+                    <span class="text-3xl">${cuisine.name}</span><br>
+                    <span class="text-sm opacity-60 tracking-widest">流派与特色</span>
+                </div>
+                <div class="flex flex-col gap-3 flex-grow">
+                    ${cuisine.branches.map(b => `
+                        <div class="feature-item">
+                            <span class="font-bold mr-2 text-vermilion">【${b.name}】</span>
+                            <span class="text-gray-600">${b.desc}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+
+
+        // --- 启动 ---
+        initTree();
+        initMap();
+
+        window.addEventListener('resize', () => {
+            treeChart.resize();
+            mapChart.resize();
+        });
+
+    </script>
+</body>
+</html>
